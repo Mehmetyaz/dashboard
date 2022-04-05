@@ -2,7 +2,7 @@ part of '../dashboard.dart';
 
 class DashboardController {
   DashboardController({required List<DashboardItem> items, required this.verticalSlotCount})
-      : items = items.asMap().map((key, value) => MapEntry(value.id, value));
+      : items = items.asMap().map((key, value) => MapEntry(value.identifier, value));
 
 
 
