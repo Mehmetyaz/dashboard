@@ -1,34 +1,22 @@
-part of '../../dashboard.dart';
+part of dashboard;
 
-class ItemLayoutData {
-  ItemLayoutData({
-    required this.startX,
-    required this.endX,
-    required this.startY,
-    required this.endY,
-    this.additionalData,
-    this.maxWidth,
-    this.minWidth = 1,
-    this.maxHeight,
-    this.minHeight = 1,
-  })  : width = endX - startX,
-        height = endY - startY;
-
-  ItemLayoutData.fromSWH(
+class ItemLayout {
+  const ItemLayout(
       {required this.startX,
       required this.startY,
       required this.width,
       required this.height,
-      this.additionalData,
       this.minWidth = 1,
       this.minHeight = 1,
       this.maxHeight,
       this.maxWidth})
-      : endX = startX + width,
-        endY = startY + height;
+      : assert(minWidth <= width),
+        assert(minHeight <= height),
+        assert(maxHeight == null || maxHeight >= height),
+        assert(maxWidth == null || maxWidth >= width);
 
-  factory ItemLayoutData.fromMap(Map<String, dynamic> map) {
-    return ItemLayoutData.fromSWH(
+  factory ItemLayout.fromMap(Map<String, dynamic> map) {
+    return ItemLayout(
         startX: map["s_X"],
         startY: map["s_Y"],
         width: map["w"],
@@ -36,8 +24,7 @@ class ItemLayoutData {
         maxHeight: map["max_H"],
         maxWidth: map["max_W"],
         minHeight: map["min_H"],
-        minWidth: map["min_W"],
-        additionalData: map["add"]);
+        minWidth: map["min_W"]);
   }
 
   Map<String, dynamic> toMap() {
@@ -50,21 +37,48 @@ class ItemLayoutData {
       "min_H": minHeight,
       if (maxHeight != null) "max_H": maxHeight,
       if (maxWidth != null) "max_W": maxWidth,
-      if (additionalData != null) "add": additionalData
     };
   }
 
-  ///
-  int startX, startY, endX, endY;
+  @override
+  String toString() {
+    return "startX: $startX , startY: $startY , width: $width , height: $height";
+  }
 
   ///
-  int width, height;
+  final int startX, startY;
 
   ///
-  int minWidth, minHeight;
+  final int width, height;
 
-  int? maxWidth, maxHeight;
+  ///
+  final int minWidth, minHeight;
 
+  final int? maxWidth, maxHeight;
 
-  Map<String, dynamic>? additionalData;
+  ItemLayout copyWithDimension({int? width, int? height}) {
+    return ItemLayout(
+        startX: startX,
+        startY: startY,
+        width: width ?? this.width,
+        height: height ?? this.height,
+        minHeight: minHeight,
+        maxHeight: maxHeight,
+        maxWidth: maxWidth,
+        minWidth: minWidth);
+  }
+
+  ItemLayout copyWithStarts({int? startX, int? startY}) {
+    var x = startX ?? this.startX;
+    var y = startY ?? this.startY;
+    return ItemLayout(
+        startX: x,
+        startY: y,
+        width: width,
+        height: height,
+        minHeight: minHeight,
+        maxHeight: maxHeight,
+        maxWidth: maxWidth,
+        minWidth: minWidth);
+  }
 }

@@ -1,17 +1,33 @@
-part of '../../dashboard.dart';
+part of dashboard;
 
-abstract class DashboardItem {
-  factory DashboardItem.empty(
-          {required String id, required ItemLayoutData layoutData}) =>
-      EmptyDashboard(id: id, layoutData: layoutData);
+/// A dashboard consists of [DashboardItem]s.
+/// [DashboardItem] holds item identifier([identifier]) and [layoutData].
+///
+class DashboardItem<T> {
+  DashboardItem(
+      {int startX = 0,
+      int startY = 0,
+      required int width,
+      required int height,
+      int minWidth = 1,
+      int minHeight = 1,
+      int? maxHeight,
+      int? maxWidth,
+      required this.identifier,
+      this.data})
+      : layoutData = ItemLayout(
+            startX: startX,
+            startY: startY,
+            width: width,
+            height: height,
+            maxHeight: maxHeight,
+            maxWidth: maxWidth,
+            minWidth: minWidth,
+            minHeight: minHeight);
 
-  DashboardItem({required this.id, required this.layoutData});
+  T? data;
 
-  ItemLayoutData layoutData;
-  String id;
-}
+  ItemLayout layoutData;
 
-class EmptyDashboard extends DashboardItem {
-  EmptyDashboard({required String id, required ItemLayoutData layoutData})
-      : super(id: id, layoutData: layoutData);
+  String identifier;
 }
