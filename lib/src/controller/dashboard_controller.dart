@@ -67,6 +67,9 @@ class DashboardLayoutController<T> with ChangeNotifier {
   late DashboardItemController<T> itemController;
 
   ///
+  late ViewportDelegate _viewportDelegate;
+
+  ///
   late int slotCount;
 
   ///
@@ -91,28 +94,19 @@ class DashboardLayoutController<T> with ChangeNotifier {
     }
   }
 
-  BoxConstraints? _constrains;
+  // BoxConstraints? _constrains;
+  // BoxConstraints get constrains => _constrains!;
 
   ///
   late double slotEdge;
 
   ///
-  late double size;
-
-  ///
   late Map<String, ItemCurrentLayout> _layouts;
 
-  ///
-  final BinaryTree<_IndexedDashboardItem> _startsTree =
-      BinaryTree<_IndexedDashboardItem>();
+  final SplayTreeMap<int, String> _startsTree = SplayTreeMap<int, String>();
+  final SplayTreeMap<int, String> _endsTree = SplayTreeMap<int, String>();
 
-  ///
-  final BinaryTree<_IndexedDashboardItem> _endsTree =
-      BinaryTree<_IndexedDashboardItem>();
-
-  ///
-  final BinaryTree<_IndexedDashboardItem> _indexesTree =
-      BinaryTree<_IndexedDashboardItem>();
+  final SplayTreeMap<int, String> _indexesTree = SplayTreeMap<int, String>();
 
   EditSession? editSession;
 
@@ -121,9 +115,10 @@ class DashboardLayoutController<T> with ChangeNotifier {
   }
 
   void saveEditSession() {
-    if (editSession?.equal() ?? false) {
+    if (editSession?.isEqual ?? false) {
       // cancelEditSession();
       editSession = null;
+      notifyListeners();
     } else {
       //Notify storage
       editSession = null;
@@ -135,16 +130,7 @@ class DashboardLayoutController<T> with ChangeNotifier {
   }
 
   // void cancelEditSession() {
-  //   print("CANCEL SESSION");
   //   if (editSession == null) return;
-  //   _startsTree = BinaryTree<_IndexedDashboardItem>(
-  //       editSession!._exStarts as BinaryTree<_IndexedDashboardItem>);
-  //   _endsTree = BinaryTree<_IndexedDashboardItem>(
-  //       editSession!._exEndsTree as BinaryTree<_IndexedDashboardItem>);
-  //   _indexesTree = BinaryTree<_IndexedDashboardItem>(
-  //       editSession!._exIndexesTree as BinaryTree<_IndexedDashboardItem>);
-  //   _layouts = Map<String, ItemCurrentLayout>.from(editSession!._exLayouts
-  //       .map((key, value) => MapEntry(key, value.copy())));
   //   _layouts.forEach((key, value) {
   //     value._mount(this, key);
   //   });
@@ -179,9 +165,7 @@ class DashboardLayoutController<T> with ChangeNotifier {
 
       xLoop:
       while (x < eX) {
-        if (x >= slotCount ||
-            _indexesTree
-                .contains(_IndexedDashboardItem(null, getIndex([x, y])))) {
+        if (x >= slotCount || _indexesTree.containsKey(getIndex([x, y]))) {
           l.add([x, y]);
           break xLoop;
         }
@@ -195,49 +179,53 @@ class DashboardLayoutController<T> with ChangeNotifier {
   }
 
   void _removeFromIndexes(ItemLayout itemLayout, String id) {
+    assert(!_locked);
+    _locked = true;
     var i = getItemIndexes(itemLayout);
 
-    var ss = _startsTree.search(_IndexedDashboardItem(null, i.first));
-    if (ss != null && ss.id == id) {
-      _startsTree.remove(_IndexedDashboardItem(id, i.first));
+    var ss = _startsTree.containsKey(i.first);
+    if (ss && _startsTree[i.first] == id) {
+      _startsTree.remove((i.first));
     }
 
-    var es = _endsTree.search(_IndexedDashboardItem(null, i.last));
-    if (es != null && es.id == id) {
-      _endsTree.remove(_IndexedDashboardItem(id, i.last));
+    var es = _endsTree.containsKey(i.last);
+    if (es && _endsTree[i.last] == id) {
+      _endsTree.remove((i.last));
     }
     for (var index in i) {
-      var s = _indexesTree.search(_IndexedDashboardItem(null, index));
-      if (s != null && s.id == id) {
-        print("rem:$index");
-        _indexesTree.remove(_IndexedDashboardItem(id, index));
+      var s = _indexesTree[index];
+      if (s != null && s == id) {
+        _indexesTree.remove(index);
       }
     }
+    _locked = false;
   }
 
   void _reIndexItem(ItemLayout itemLayout, String id) {
-    print("REINDEXING: $id");
     var l = _layouts[id]!;
     _removeFromIndexes(l.origin, id);
-
     l._height = null;
     l._width = null;
     l._startX = null;
     l._startY = null;
-
     _indexItem(itemLayout, id);
   }
 
+  bool _locked = false;
+
   void _indexItem(ItemLayout itemLayout, String id) {
+    assert(!_locked);
+    _locked = true;
     var i = getItemIndexes(itemLayout);
-    _startsTree.insert(_IndexedDashboardItem(id, i.first));
-    _endsTree.insert(_IndexedDashboardItem(id, i.last));
+    _startsTree[i.first] = id;
+    _endsTree[i.last] = id;
     for (var index in i) {
-      _indexesTree.insert(_IndexedDashboardItem(id, index));
+      _indexesTree[index] = id;
     }
 
     _layouts[id]!.origin = itemLayout;
     _layouts[id]!._mount(this, id);
+    _locked = false;
   }
 
   ///
@@ -293,13 +281,13 @@ class DashboardLayoutController<T> with ChangeNotifier {
 
   ///
   void _slideToTopAll() {
-    var l = _startsTree.toList();
+    var l = _startsTree.values.toList();
+
     _startsTree.clear();
     _endsTree.clear();
     _indexesTree.clear();
-    print("HERE:2");
     for (var e in l) {
-      mountToTop(e.id!);
+      mountToTop(e);
     }
   }
 
@@ -309,7 +297,6 @@ class DashboardLayoutController<T> with ChangeNotifier {
 
     _startsTree.clear();
     _endsTree.clear();
-    print("HERE:1");
     _indexesTree.clear();
 
     var not = <String>[];
@@ -385,28 +372,16 @@ class DashboardLayoutController<T> with ChangeNotifier {
     return l;
   }
 
-  void _setSizes() {
-    size =
-        _axis == Axis.vertical ? _constrains!.maxWidth : _constrains!.maxHeight;
-    slotEdge = size / slotCount;
-  }
-
-  void _attachConstrains(BoxConstraints constrains) {
-    if (_constrains == null) {
-      _constrains = constrains;
-    } else {
-      if (constrains.maxWidth != _constrains!.maxWidth ||
-          constrains.maxHeight != _constrains!.maxHeight) {
-        _constrains = constrains;
-      }
-    }
-    _setSizes();
+  void _setSizes(BoxConstraints _constrains) {
+    slotEdge = (_axis == Axis.vertical
+            ? _constrains.maxWidth
+            : _constrains.maxHeight) /
+        slotCount;
   }
 
   ///
   void attach(
-      {required BoxConstraints constrains,
-      required Axis axis,
+      {required Axis axis,
       required DashboardItemController<T> itemController,
       required int slotCount,
       required bool slideToTop,
@@ -425,29 +400,18 @@ class DashboardLayoutController<T> with ChangeNotifier {
 
   ///
   bool _isAttached = false;
-
-// void _notify() {
-//   notifyListeners();
-// }
 }
 
+///
 class EditSession {
+  ///
   EditSession(
       {required DashboardLayoutController layoutController,
       required this.editing})
-      : editingOrigin = editing.copy()
-  /*_exLayouts = Map<String, ItemCurrentLayout>.from(layoutController
-            ._layouts
-            .map((key, value) => MapEntry(key, value.copy()))),
-        _exIndexesTree = BinaryTree<_IndexedDashboardItem>(
-            layoutController._indexesTree),
-        _exEndsTree = BinaryTree<_IndexedDashboardItem>(
-            layoutController._endsTree),
-        _exStarts = BinaryTree<_IndexedDashboardItem>(
-            layoutController._startsTree)*/
-  ;
+      : editingOrigin = editing.copy();
 
-  bool equal() {
+  ///
+  bool get isEqual {
     editing.startX == editingOrigin.startX &&
         editing.startY == editingOrigin.startY &&
         editing.width == editingOrigin.width &&
@@ -456,48 +420,51 @@ class EditSession {
     return editing.startX == editingOrigin.startX;
   }
 
+  ///
   final ItemCurrentLayout editing;
 
+  ///
   final ItemCurrentLayout editingOrigin;
-
-// final Map<String, ItemCurrentLayout> _exLayouts;
-//
-// ///
-// final BinaryTree<Comparable> _exStarts;
-//
-// ///
-// final BinaryTree<Comparable> _exEndsTree;
-//
-// ///
-// final BinaryTree<Comparable> _exIndexesTree;
 }
 
-class _IndexedDashboardItem extends Comparable {
-  _IndexedDashboardItem(this.id, this.value);
-
-  final int value;
-  final String? id;
-
-  @override
-  bool operator ==(Object other) {
-    if (other is! _IndexedDashboardItem) {
-      throw Exception();
-    }
-    return other.value == value;
-  }
-
-  @override
-  int compareTo(Object? other) {
-    return other is _IndexedDashboardItem
-        ? value.compareTo(other.value)
-        : value.compareTo(other as int);
-  }
-
-  @override
-  String toString() {
-    return "I($value) : ID($id)";
-  }
-
-  @override
-  int get hashCode => value.hashCode;
-}
+///
+// class _IndexedDashboardItem extends Comparable {
+//   ///
+//   _IndexedDashboardItem(this.id, this.value);
+//
+//   ///
+//   final int value;
+//
+//   ///
+//   final String? id;
+//
+//   @override
+//   bool operator ==(Object other) {
+//     if (other is! _IndexedDashboardItem) {
+//       throw Exception();
+//     }
+//     return other.value == value;
+//   }
+//
+//   ///
+//   @override
+//   int compareTo(Object? other) {
+//     return other is _IndexedDashboardItem
+//         ? value.compareTo(other.value)
+//         : value.compareTo(other as int);
+//   }
+//
+//   @override
+//   String toString() {
+//     return "_IndexedDashboardItem(\"$id\", $value)";
+//   }
+//
+//   // @override
+//   // String toString() {
+//   //   return "INDEX($value) : ID($id)";
+//   // }
+//
+//   ///
+//   @override
+//   int get hashCode => value.hashCode;
+// }

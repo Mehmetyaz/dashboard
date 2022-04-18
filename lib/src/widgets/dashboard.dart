@@ -23,7 +23,8 @@ class Dashboard<T> extends StatefulWidget {
       this.shrinkToPlace = true,
       this.swapOnEditing = true,
       this.slideToTop = true,
-      this.editModeSettings = const EditModeSettings()})
+      this.editModeSettings = const EditModeSettings(),
+      this.textDirection = TextDirection.ltr})
       : super(key: key);
 
   ///
@@ -75,6 +76,8 @@ class Dashboard<T> extends StatefulWidget {
   ///
   final bool slideToTop;
 
+  final TextDirection textDirection;
+
   @override
   _DashboardState<T> createState() => _DashboardState<T>();
 }
@@ -105,17 +108,17 @@ class _DashboardState<T> extends State<Dashboard<T>>
     /// check slot count
     /// check new constrains equal exists
 
-    var c = BoxConstraints(
-      maxHeight: constraints.maxHeight - widget.padding.vertical,
-      maxWidth: constraints.maxWidth - widget.padding.horizontal,
-    );
+    _layoutController._viewportDelegate = ViewportDelegate(
+        constraints: constraints,
+        padding: widget.padding.resolve(widget.textDirection),
+        mainAxisSpace: widget.mainAxisSpace,
+        crossAxisSpace: widget.crossAxisSpace);
 
     if (!_layoutController._isAttached) {
       _layoutController.attach(
           slideToTop: widget.slideToTop,
           shrinkToPlace: widget.shrinkToPlace,
           axis: widget.axis,
-          constrains: c,
           itemController: widget.dashboardItemController,
           slotCount: widget.slotCount);
     }
@@ -128,18 +131,19 @@ class _DashboardState<T> extends State<Dashboard<T>>
           slideToTop: widget.slideToTop,
           slotCount: widget.slotCount,
           itemController: widget.dashboardItemController,
-          constrains: c,
           axis: widget.axis);
     }
-    _layoutController._attachConstrains(c);
+
+    _layoutController
+        ._setSizes(_layoutController._viewportDelegate.resolvedConstrains);
     _offset = o;
-    _offset!.applyViewportDimension(
-        widget.axis == Axis.vertical ? c.maxHeight : c.maxWidth);
+    _offset!.applyViewportDimension(widget.axis == Axis.vertical
+        ? _layoutController._viewportDelegate.constraints.maxHeight
+        : _layoutController._viewportDelegate.constraints.maxWidth);
 
-    var maxIndex =
-        (_layoutController._endsTree.max as _IndexedDashboardItem).value;
+    var maxIndex = (_layoutController._endsTree.lastKey());
 
-    var maxCoordinate = (_layoutController.getIndexCoordinate(maxIndex));
+    var maxCoordinate = (_layoutController.getIndexCoordinate(maxIndex!));
 
     _maxExtend = ((maxCoordinate[1] + 1) * _layoutController.slotEdge);
 
@@ -159,7 +163,7 @@ class _DashboardState<T> extends State<Dashboard<T>>
   Duration duration = const Duration(milliseconds: 200);
 
   ///
-  final GlobalKey<_DashboardViewportOffsetBuilderState> _stateKey = GlobalKey();
+  final GlobalKey<_DashboardStackState> _stateKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -177,452 +181,16 @@ class _DashboardState<T> extends State<Dashboard<T>>
             SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
               _stateKey.currentState?._listenOffset(o);
             });
-            return _DashboardViewportOffsetBuilder<T>(
+            return _DashboardStack<T>(
                 maxScrollOffset: _maxExtend,
                 editModeSettings: widget.editModeSettings,
-                crossAxisSpace: widget.crossAxisSpace,
-                mainAxisSpace: widget.mainAxisSpace,
-                padding: widget.padding.resolve(TextDirection.ltr),
                 cacheExtend: widget.cacheExtend,
                 key: _stateKey,
                 itemBuilder: widget.itemBuilder,
                 dashboardController: _layoutController,
-                constraints: constrains,
                 offset: offset);
           });
     });
-  }
-}
-
-class _DashboardViewportOffsetBuilder<T> extends StatefulWidget {
-  const _DashboardViewportOffsetBuilder(
-      {Key? key,
-      required this.constraints,
-      required this.editModeSettings,
-      required this.offset,
-      required this.dashboardController,
-      required this.itemBuilder,
-      required this.cacheExtend,
-      required this.crossAxisSpace,
-      required this.mainAxisSpace,
-      required this.padding,
-      required this.maxScrollOffset})
-      : super(key: key);
-
-  final BoxConstraints constraints;
-  final ViewportOffset offset;
-  final DashboardLayoutController<T> dashboardController;
-  final double cacheExtend;
-  final double mainAxisSpace, crossAxisSpace;
-  final EditModeSettings editModeSettings;
-  final EdgeInsets padding;
-  final double maxScrollOffset;
-
-  ///
-  final DashboardItemBuilder<T> itemBuilder;
-
-  @override
-  State<_DashboardViewportOffsetBuilder> createState() =>
-      _DashboardViewportOffsetBuilderState();
-}
-
-class _DashboardViewportOffsetBuilderState
-    extends State<_DashboardViewportOffsetBuilder> {
-  ///
-  ViewportOffset get viewportOffset => widget.offset;
-
-  ///
-  double get pixels => viewportOffset.pixels;
-
-  ///
-  double get width => widget.constraints.maxWidth;
-
-  ///
-  double get height => widget.constraints.maxHeight;
-
-  ///
-  _listenOffset(ViewportOffset o) {
-    o.removeListener(_listen);
-    o.addListener(_listen);
-  }
-
-  ///
-  @override
-  void didChangeDependencies() {
-    _listenOffset(viewportOffset);
-    super.didChangeDependencies();
-  }
-
-  @override
-  void initState() {
-    _listenOffset(viewportOffset);
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    viewportOffset.removeListener(_listen);
-    super.dispose();
-  }
-
-  void _listen() {
-    setState(() {});
-  }
-
-  Widget buildPositioned(List list) {
-    return _DashboardItemWidget(
-      currentPosition: (list[0] as ItemCurrentLayout).currentPosition(
-          offset: viewportOffset.pixels,
-          padding: widget.padding,
-          mainAxisSpace: widget.mainAxisSpace,
-          crossAxisSpace: widget.mainAxisSpace,
-          slotEdge: slotEdge),
-      offset: viewportOffset.pixels,
-      crossAxisSpace: widget.crossAxisSpace,
-      mainAxisSpace: widget.mainAxisSpace,
-      padding: widget.padding,
-      itemCurrentLayout: list[0],
-      id: list[2],
-      editModeSettings: widget.editModeSettings,
-      child: list[1],
-      layoutController: widget.dashboardController,
-      constraints: widget.constraints,
-    );
-  }
-
-  late double slotEdge;
-
-  final Map<String, List> _widgetsMap = <String, List>{};
-
-  void addWidget(String id) {
-    var i = widget.dashboardController.itemController._items[id];
-    var l = widget.dashboardController._layouts[i!.identifier]!;
-    _widgetsMap[id] = [l, widget.itemBuilder(i, l), id];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    slotEdge = widget.dashboardController.slotEdge;
-
-    var startPixels = (viewportOffset.pixels) - widget.cacheExtend;
-    var startY = (startPixels / slotEdge).floor();
-    var startIndex = widget.dashboardController.getIndex([0, startY]);
-
-    var endPixels = viewportOffset.pixels + height + widget.cacheExtend;
-    var endY = (endPixels / slotEdge).ceil();
-    var endIndex = widget.dashboardController
-        .getIndex([widget.dashboardController.slotCount - 1, endY]);
-
-    var needs = (widget.dashboardController._indexesTree.toListFrom(
-                _IndexedDashboardItem("", startIndex),
-                equal: true,
-                greaterThan: true,
-                bound: Bound<_IndexedDashboardItem>(
-                    equal: true, element: _IndexedDashboardItem("", endIndex)))
-            as List<_IndexedDashboardItem>)
-        .map((e) => e.id)
-        .toList();
-
-    var beforeIt = widget.dashboardController._indexesTree.toListFrom(
-        _IndexedDashboardItem(null, startIndex),
-        equal: false,
-        greaterThan: false) as List<_IndexedDashboardItem>;
-
-    var afterIt = widget.dashboardController._indexesTree.toListFrom(
-        _IndexedDashboardItem(null, endIndex),
-        equal: false,
-        greaterThan: true) as List<_IndexedDashboardItem>;
-
-    var needDelete = [...afterIt, ...beforeIt];
-    var edit = widget.dashboardController.editSession?.editing;
-
-    for (var n in needDelete) {
-      if (!needs.contains(n.id) && n.id != edit?.id) {
-        _widgetsMap.remove(n.id);
-      }
-    }
-
-    for (var n in needs) {
-      if (!_widgetsMap.containsKey(n)) {
-        addWidget(n!);
-      }
-    }
-
-    if (edit != null && !_widgetsMap.containsKey(edit.id)) {
-      addWidget(edit.id);
-    }
-
-    Widget result = Stack(
-      clipBehavior: Clip.hardEdge,
-      children: [
-        if (widget.editModeSettings.editBackground &&
-            widget.dashboardController.isEditing)
-          Positioned(
-            top: widget.padding.top,
-            left: widget.padding.left,
-            width: widget.constraints.maxWidth - widget.padding.vertical,
-            height: widget.constraints.maxHeight - widget.padding.horizontal,
-            child: CustomPaint(
-              painter: EditModeBackgroundPainter(
-                  padding: widget.padding,
-                  fillPosition: widget.dashboardController.editSession?.editing,
-                  mainAxisSpace: widget.mainAxisSpace,
-                  crossAxisSpace: widget.crossAxisSpace,
-                  slotCount: widget.dashboardController.slotCount,
-                  style: widget.editModeSettings.backgroundStyle,
-                  slotEdge: slotEdge,
-                  offset: viewportOffset.pixels,
-                  constraints: BoxConstraints(
-                      maxWidth:
-                          widget.constraints.maxWidth - widget.padding.vertical,
-                      maxHeight: widget.constraints.maxHeight -
-                          widget.padding.horizontal)),
-              isComplex: true,
-            ),
-          ),
-        ..._widgetsMap.entries
-            .where((element) =>
-                element.value[2] !=
-                widget.dashboardController.editSession?.editing)
-            .map((e) => buildPositioned(e.value))
-            .toList(),
-        ...?(widget.dashboardController.editSession == null
-            ? null
-            : [
-                buildPositioned(_widgetsMap[
-                    widget.dashboardController.editSession?.editing.id]!)
-              ])
-      ],
-    );
-
-    if (widget.dashboardController.isEditing) {
-      result = GestureDetector(
-        onPanStart: (panStart) {
-          _onMoveStart(panStart.localPosition);
-        },
-        onPanUpdate: (u) {
-          setSpeed(u.localPosition);
-          _onMoveUpdate(u.localPosition);
-        },
-        onPanEnd: (e) {
-          _onMoveEnd();
-        },
-        onLongPressStart: (longPressStart) {
-          _onMoveStart(longPressStart.localPosition);
-        },
-        onLongPressMoveUpdate: (u) {
-          setSpeed(u.localPosition);
-          _onMoveUpdate(u.localPosition);
-        },
-        onLongPressEnd: (e) {
-          _onMoveEnd();
-        },
-        child: result,
-      );
-    }
-    return result;
-  }
-
-  void setSpeed(Offset global) {
-    var last = min((height - global.dy), global.dy);
-    var m = global.dy < 50 ? -1 : 1;
-    if (last < 10) {
-      speed = 0.3 * m;
-    } else if (last < 20) {
-      speed = 0.1 * m;
-    } else if (last < 50) {
-      speed = 0.05 * m;
-    } else {
-      speed = 0;
-    }
-    scroll();
-  }
-
-  void scroll() {
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      if (speed != 0) {
-        viewportOffset.jumpTo(
-            (pixels + speed).clamp(0, widget.maxScrollOffset + (slotEdge * 2)));
-        scroll();
-      }
-    });
-  }
-
-  double speed = 0;
-
-  void _onMoveStart(Offset local) {
-    var holdGlobal = Offset(local.dx - widget.padding.left,
-        local.dy - widget.padding.top + viewportOffset.pixels);
-
-    var x = (local.dx - widget.padding.left) ~/ slotEdge;
-    var y = (local.dy + pixels - widget.padding.top) ~/ slotEdge;
-
-    var e = widget.dashboardController._indexesTree.search(
-        _IndexedDashboardItem(
-            null, widget.dashboardController.getIndex([x, y])));
-
-    print(widget.dashboardController._indexesTree.toList());
-
-    if (e is _IndexedDashboardItem) {
-      var directions = <AxisDirection>[];
-      _editing = widget.dashboardController._layouts[e.id!]!;
-      var _current = _editing!.currentPosition(
-          crossAxisSpace: widget.crossAxisSpace,
-          mainAxisSpace: widget.mainAxisSpace,
-          offset: viewportOffset.pixels,
-          padding: widget.padding,
-          slotEdge: slotEdge);
-      var _itemGlobal = ItemCurrentPosition(
-          x: _current.x - widget.padding.left,
-          y: _current.y - widget.padding.top,
-          height: _current.height,
-          width: _current.width);
-      if (holdGlobal.dx < _itemGlobal.x || holdGlobal.dy < _itemGlobal.y) {
-        _editing = null;
-        setState(() {});
-        return;
-      }
-      if (_itemGlobal.x + widget.editModeSettings.resizeCursorSide >
-          holdGlobal.dx) {
-        directions.add(AxisDirection.left);
-      }
-
-      if (_itemGlobal.y + widget.editModeSettings.resizeCursorSide >
-          holdGlobal.dy) {
-        directions.add(AxisDirection.up);
-      }
-
-      if (_itemGlobal.endX - widget.editModeSettings.resizeCursorSide <
-          holdGlobal.dx) {
-        directions.add(AxisDirection.right);
-      }
-
-      if (_itemGlobal.endY - widget.editModeSettings.resizeCursorSide <
-          holdGlobal.dy) {
-        directions.add(AxisDirection.down);
-      }
-      if (directions.isNotEmpty) {
-        _directions = directions;
-      } else {
-        _directions = null;
-      }
-
-      if (kDebugMode) {
-        print("HOLDING: ${e.id}:$_directions\n$holdGlobal\n"
-            "_ItemCurrentPosition(\n"
-            "x: ${_current.x - widget.padding.left},\n"
-            "y: ${_current.y - widget.padding.top},\n"
-            "height: ${_current.height}\n"
-            "width: ${_current.width}\n"
-            ");");
-      }
-
-      _start = local;
-      _startScroll = pixels;
-      widget.dashboardController.startEdit(e.id!);
-      setState(() {});
-    } else {
-      _start = null;
-      _editing = null;
-      _directions = null;
-      speed = 0;
-      widget.dashboardController.saveEditSession();
-    }
-  }
-
-  ItemCurrentLayout? _editing;
-
-  bool get _editingResize => _directions != null;
-  List<AxisDirection>? _directions;
-  Offset? _start;
-  double? _startScroll;
-
-  void _onMoveUpdate(Offset local) {
-    if (_editing != null) {
-      if (_editingResize) {
-        var difPos = ItemCurrentPosition(height: 0, width: 0, y: 0, x: 0);
-        var d = <Resizing>[];
-        var dif = local - _start!;
-        if (_directions!.contains(AxisDirection.left)) {
-          var dx = _editing!._clampDifLeft(dif.dx);
-          difPos.x += dx;
-          difPos.width -= dx;
-        }
-
-        if (_directions!.contains(AxisDirection.up)) {
-          var dy = _editing!._clampDifTop(dif.dy);
-          difPos.y += (dy);
-          difPos.height -= (dy + pixels - _startScroll!);
-        }
-
-        if (_directions!.contains(AxisDirection.right)) {
-          var dx = _editing!._clampDifRight(dif.dx);
-          difPos.width += dx;
-        }
-
-        if (_directions!.contains(AxisDirection.down)) {
-          var dy = _editing!._clampDifBottom(dif.dy);
-          difPos.height += dy + pixels - _startScroll!;
-        }
-
-        if (_directions!.contains(AxisDirection.left)) {
-          if (dif.dx < 0) {
-            d.add(Resizing(AxisDirection.left, true));
-          } else if (dif.dx > slotEdge) {
-            d.add(Resizing(AxisDirection.left, false));
-          }
-        } else if (_directions!.contains(AxisDirection.right)) {
-          if (dif.dx < -slotEdge) {
-            d.add(Resizing(AxisDirection.right, false));
-          } else if (dif.dx > 0) {
-            d.add(Resizing(AxisDirection.right, true));
-          }
-        }
-
-        if (_directions!.contains(AxisDirection.up)) {
-          if (dif.dy < 0) {
-            d.add(Resizing(AxisDirection.up, true));
-          } else if (dif.dy > slotEdge) {
-            d.add(Resizing(AxisDirection.up, false));
-          }
-        } else if (_directions!.contains(AxisDirection.down)) {
-          if (dif.dy < -slotEdge) {
-            d.add(Resizing(AxisDirection.down, false));
-          } else if (dif.dy > 0) {
-            d.add(Resizing(AxisDirection.down, true));
-          }
-        }
-
-        /// BOUND
-        var res = _editing!.tryResize(d);
-        if (res != null) {
-          _editing!.save();
-          res.adjustResizeOffset(local, slotEdge);
-          _editing!._resizePosition.value = res.adjustedPosition;
-          addWidget(_editing!.id);
-          setState(() {
-            _start = res.adjustedDif;
-            print("N RESIZE: ${_editing!}");
-          });
-        } else {
-          _editing!._resizePosition.value = difPos;
-        }
-      } else {
-        _editing!._transform.value =
-            local - _start! + Offset(0, pixels - _startScroll!);
-      }
-    }
-  }
-
-  void _onMoveEnd() {
-    _editing?._transform.value = Offset.zero;
-    _editing?._resizePosition.value =
-        ItemCurrentPosition(height: 0, width: 0, y: 0, x: 0);
-    _editing = null;
-    _start = null;
-    _directions = null;
-    speed = 0;
-    widget.dashboardController.saveEditSession();
   }
 }
 
@@ -631,14 +199,9 @@ class _DashboardItemWidget extends StatefulWidget {
       {Key? key,
       required this.layoutController,
       required this.child,
-      required this.offset,
       required this.editModeSettings,
       required this.id,
-      required this.mainAxisSpace,
-      required this.crossAxisSpace,
-      required this.padding,
       required this.itemCurrentLayout,
-      required this.constraints,
       required this.currentPosition})
       : super(key: key);
 
@@ -646,11 +209,7 @@ class _DashboardItemWidget extends StatefulWidget {
   final Widget child;
   final String id;
   final DashboardLayoutController layoutController;
-  final double crossAxisSpace, mainAxisSpace;
-  final EdgeInsets padding;
   final EditModeSettings editModeSettings;
-  final double offset;
-  final BoxConstraints constraints;
   final ItemCurrentPosition currentPosition;
 
   @override
@@ -660,7 +219,7 @@ class _DashboardItemWidget extends StatefulWidget {
 class _DashboardItemWidgetState extends State<_DashboardItemWidget> {
   late MouseCursor cursor;
 
-  late double leftPad, rightPad, topPad, bottomPad;
+  // late double leftPad, rightPad, topPad, bottomPad;
 
   @override
   void dispose() {
@@ -678,7 +237,7 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget> {
 
   bool onRightSide(double dX) =>
       dX >
-      (c.maxWidth + _resizePosition.width) -
+      (widget.currentPosition.width + _resizePosition.width) -
           widget.editModeSettings.resizeCursorSide;
 
   bool onLeftSide(double dX) =>
@@ -689,7 +248,7 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget> {
 
   bool onBottomSide(double dY) =>
       dY >
-      (c.maxHeight + _resizePosition.height) -
+      (widget.currentPosition.height + _resizePosition.height) -
           widget.editModeSettings.resizeCursorSide;
 
   void _hover(PointerHoverEvent hover) {
@@ -744,19 +303,19 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget> {
 
   ItemCurrentLayout get l => widget.itemCurrentLayout;
 
-  late BoxConstraints c;
+  //late BoxConstraints c;
 
   double get slotEdge => widget.layoutController.slotEdge;
 
   @override
   Widget build(BuildContext context) {
-    leftPad = l.isLeftSide ? 0.0 : widget.crossAxisSpace / 2;
-    rightPad = l.isRightSide ? 0.0 : widget.crossAxisSpace / 2;
-    topPad = l.isTopSide ? 0.0 : widget.mainAxisSpace / 2;
-    bottomPad = l.isBottomSide ? 0.0 : widget.mainAxisSpace / 2;
-    c = BoxConstraints(
-        maxWidth: l.width * slotEdge - rightPad - leftPad,
-        maxHeight: l.height * slotEdge - topPad - bottomPad);
+    // leftPad = l.isLeftSide ? 0.0 : widget.crossAxisSpace / 2;
+    // rightPad = l.isRightSide ? 0.0 : widget.crossAxisSpace / 2;
+    // topPad = l.isTopSide ? 0.0 : widget.mainAxisSpace / 2;
+    // bottomPad = l.isBottomSide ? 0.0 : widget.mainAxisSpace / 2;
+    // c = BoxConstraints(
+    //     maxWidth: l.width * slotEdge - rightPad - leftPad,
+    //     maxHeight: l.height * slotEdge - topPad - bottomPad);
 
     Widget result = Material(
       elevation: 10,

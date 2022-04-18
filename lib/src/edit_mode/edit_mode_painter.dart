@@ -3,20 +3,15 @@ part of dashboard;
 class EditModeBackgroundPainter extends CustomPainter {
   EditModeBackgroundPainter(
       {required this.offset,
-      required this.constraints,
       required this.slotEdge,
       required this.slotCount,
-      required this.mainAxisSpace,
-      required this.crossAxisSpace,
-      required this.fillPosition,
-      required this.padding,
+      required this.viewportDelegate,
+      this.fillPosition,
       this.style = const EditModeBackgroundStyle()});
 
-  ItemCurrentLayout? fillPosition;
+  ViewportDelegate viewportDelegate;
 
-  EdgeInsets padding;
-
-  double crossAxisSpace, mainAxisSpace;
+  Rect? fillPosition;
 
   double offset;
 
@@ -24,7 +19,11 @@ class EditModeBackgroundPainter extends CustomPainter {
 
   int slotCount;
 
-  BoxConstraints constraints;
+  BoxConstraints get constraints => viewportDelegate.resolvedConstrains;
+
+  double get mainAxisSpace => viewportDelegate.mainAxisSpace;
+
+  double get crossAxisSpace => viewportDelegate.crossAxisSpace;
 
   EditModeBackgroundStyle style;
 
@@ -92,22 +91,25 @@ class EditModeBackgroundPainter extends CustomPainter {
     drawVerticalLines(canvas);
     drawHorizontals(canvas);
     if (fillPosition != null) {
-      var pos = fillPosition!.currentPosition(
-          offset: offset,
-          padding: padding,
-          mainAxisSpace: mainAxisSpace,
-          crossAxisSpace: crossAxisSpace,
-          slotEdge: slotEdge);
-      var rect = Rect.fromLTWH(
-          pos.x - padding.left, pos.y - padding.top, pos.width, pos.height);
+      // var pos = fillPosition!.currentPosition(
+      //     offset: offset,
+      //     viewportDelegate: viewportDelegate,
+      //     slotEdge: slotEdge);
+      // var rect = Rect.fromLTWH(pos.x - viewportDelegate.padding.left,
+      //     pos.y - viewportDelegate.padding.top, pos.width, pos.height);
 
-      canvas.drawRect(rect, Paint()..color = Colors.red);
+      canvas.drawRect(fillPosition!, Paint()..color = style.fillColor);
     }
   }
 
   @override
   bool shouldRepaint(EditModeBackgroundPainter oldDelegate) {
-    return true;
+    return true/*fillPosition != oldDelegate.fillPosition ||
+        offset != oldDelegate.offset ||
+        slotEdge != oldDelegate.slotEdge ||
+        slotCount != oldDelegate.slotCount ||
+        style != oldDelegate.style ||
+        viewportDelegate != oldDelegate.viewportDelegate*/;
   }
 
   @override

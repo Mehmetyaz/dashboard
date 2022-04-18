@@ -9,7 +9,6 @@ void main() {
       slideToTop: true,
       shrinkToPlace: true,
       axis: Axis.vertical,
-      constrains: const BoxConstraints(maxWidth: 900),
       itemController: dbIC,
       slotCount: 4);
   test("get_index_vertical", () {
@@ -47,7 +46,6 @@ void main() {
         shrinkToPlace: true,
         slotCount: 9,
         itemController: dbIC,
-        constrains: const BoxConstraints(maxWidth: 900),
         axis: Axis.vertical);
 
     var o = db.getOverflows(
@@ -79,7 +77,6 @@ void main() {
         slideToTop: true,
         shrinkToPlace: true,
         axis: Axis.vertical,
-        constrains: const BoxConstraints(maxWidth: 900),
         itemController: dbIC,
         slotCount: 9);
 

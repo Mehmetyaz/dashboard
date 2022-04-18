@@ -1,8 +1,8 @@
 library dashboard;
 
+import 'dart:collection';
 import 'dart:math';
 
-import 'package:binary_tree/binary_tree.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -13,9 +13,13 @@ part 'widgets/delegate.dart';
 
 part 'widgets/dashboard.dart';
 
+part 'widgets/dashboard_stack.dart';
+
 part 'widgets/dashboard_item_widget.dart';
+part 'widgets/animated_background_painter.dart';
 
 part 'models/dashboard_item.dart';
+part 'models/viewport_settings.dart';
 
 part 'models/edit.dart';
 

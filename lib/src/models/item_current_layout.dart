@@ -40,37 +40,63 @@ class Resizing {
 }
 
 class Resize {
-  Resize(this.resizing);
+  Resize(this.resize);
 
-  List<Resizing> resizing;
+  Resizing resize;
 
   late Offset adjustedDif;
   late ItemCurrentPosition adjustedPosition;
 
-  void adjustResizeOffset(Offset local, double slotEdge) {
+  void adjustResizeOffset(Offset local, double slotEdge,
+      ItemCurrentPosition difPos, double startScroll) {
     var pos = ItemCurrentPosition(height: 0, width: 0, y: 0, x: 0);
     var difOffset = Offset(local.dx, local.dy);
-    for (var resize in resizing) {
-      if (resize.increment) {
-        if (resize.direction == AxisDirection.left) {
-          pos
-            ..x += slotEdge
-            ..width -= slotEdge;
-          difOffset += Offset(-slotEdge, 0);
-        } else if (resize.direction == AxisDirection.right) {
-          pos.width -= slotEdge;
-          difOffset += Offset(slotEdge, 0);
-        } else if (resize.direction == AxisDirection.up) {
-          pos
-            ..y += slotEdge
-            ..height -= slotEdge;
-          difOffset += Offset(0, -slotEdge);
-        } else {
-          pos.height -= slotEdge;
-          difOffset += Offset(0, slotEdge);
-        }
+    if (resize.increment) {
+      if (resize.direction == AxisDirection.left) {
+        pos
+          ..x += slotEdge
+          ..width -= slotEdge
+          ..y += difPos.y
+          ..height -= difPos.y;
+        difOffset += Offset(-slotEdge, -difPos.y);
+      } else if (resize.direction == AxisDirection.up) {
+        pos
+          ..y += slotEdge
+          ..height -= slotEdge
+          ..x += difPos.x
+          ..width -= difPos.x;
+        difOffset += Offset(-difPos.x, -slotEdge);
+      } else if (resize.direction == AxisDirection.right) {
+        pos
+          ..width -= slotEdge
+          ..height += difPos.height;
+        difOffset += Offset(slotEdge, -difPos.height);
+      } else {
+        pos
+          ..height -= slotEdge
+          ..width += difPos.width;
+        difOffset += Offset(-difPos.width, slotEdge);
+      }
+    } else {
+      if (resize.direction == AxisDirection.left) {
+        pos
+          ..y += difPos.y
+          ..height -= difPos.y;
+        difOffset += Offset(0, -difPos.y);
+      } else if (resize.direction == AxisDirection.up) {
+        pos
+          ..x += difPos.x
+          ..width -= difPos.x;
+        difOffset += Offset(-difPos.x, 0);
+      } else if (resize.direction == AxisDirection.right) {
+        pos.height += difPos.height;
+        difOffset += Offset(0, -difPos.height);
+      } else {
+        pos.width += difPos.width;
+        difOffset += Offset(-difPos.width, 0);
       }
     }
+
     adjustedDif = difOffset;
     adjustedPosition = pos;
   }
@@ -93,19 +119,19 @@ class ItemCurrentLayout implements ItemLayout {
 
   ItemCurrentPosition currentPosition(
       {required double offset,
-      required EdgeInsets padding,
-      required double mainAxisSpace,
-      required double crossAxisSpace,
+      required ViewportDelegate viewportDelegate,
       required double slotEdge}) {
-    var leftPad = isLeftSide ? 0.0 : crossAxisSpace / 2;
-    var rightPad = isRightSide ? 0.0 : crossAxisSpace / 2;
-    var topPad = isTopSide ? 0.0 : mainAxisSpace / 2;
-    var bottomPad = isBottomSide ? 0.0 : mainAxisSpace / 2;
+    var leftPad = isLeftSide ? 0.0 : viewportDelegate.crossAxisSpace / 2;
+    var rightPad = isRightSide ? 0.0 : viewportDelegate.crossAxisSpace / 2;
+    var topPad = isTopSide ? 0.0 : viewportDelegate.mainAxisSpace / 2;
+    var bottomPad = isBottomSide ? 0.0 : viewportDelegate.mainAxisSpace / 2;
     return ItemCurrentPosition(
         height: height * slotEdge - topPad - bottomPad,
         width: width * slotEdge - rightPad - leftPad,
-        y: ((startY * (slotEdge)) - offset) + padding.top + topPad,
-        x: (startX * slotEdge) + padding.left + leftPad);
+        y: ((startY * (slotEdge)) - offset) +
+            viewportDelegate.padding.top +
+            topPad,
+        x: (startX * slotEdge) + viewportDelegate.padding.left + leftPad);
   }
 
   double get _slotEdge {
@@ -148,11 +174,11 @@ class ItemCurrentLayout implements ItemLayout {
       sideIndexes = _layoutController.getItemIndexes(ItemLayout(
           startX: startX - 1, startY: startY, width: 1, height: height));
     } else if (direction == AxisDirection.right) {
-      if (startX == _layoutController.slotCount - 1) {
+      if ((startX + width) >= _layoutController.slotCount) {
         return false;
       }
       sideIndexes = _layoutController.getItemIndexes(ItemLayout(
-          startX: startX - width, startY: startY, width: 1, height: height));
+          startX: startX + width, startY: startY, width: 1, height: height));
     } else if (direction == AxisDirection.up) {
       if (startY == 0) {
         return false;
@@ -166,9 +192,7 @@ class ItemCurrentLayout implements ItemLayout {
 
     var res = false;
     for (var i in sideIndexes) {
-      res = _layoutController._indexesTree
-          .contains(_IndexedDashboardItem(null, i));
-
+      res = _layoutController._indexesTree.containsKey(i);
       if (res) return false;
     }
     return !res;
@@ -182,17 +206,30 @@ class ItemCurrentLayout implements ItemLayout {
       if (resize.increment) {
         if (sideIsEmpty(direction)) {
           if (direction == AxisDirection.left) {
-            _startX = startX - 1;
-            _width = width + 1;
+            if ((maxWidth == null || width < maxWidth!) &&
+                width < _layoutController.slotCount) {
+              _startX = startX - 1;
+              _width = width + 1;
+              res.add(resize);
+            }
           } else if (direction == AxisDirection.right) {
-            _width = width + 1;
+            if ((maxWidth == null || width < maxWidth!) &&
+                width < _layoutController.slotCount) {
+              _width = width + 1;
+              res.add(resize);
+            }
           } else if (direction == AxisDirection.up) {
-            _startY = startY - 1;
-            _height = height + 1;
+            if ((maxHeight == null || height < maxHeight!)) {
+              _startY = startY - 1;
+              _height = height + 1;
+              res.add(resize);
+            }
           } else {
-            _height = height + 1;
+            if (maxHeight == null || height < maxHeight!) {
+              _height = height + 1;
+              res.add(resize);
+            }
           }
-          res.add(resize);
         }
       } else {
         //decrement size by direction
@@ -228,7 +265,7 @@ class ItemCurrentLayout implements ItemLayout {
       return null;
     }
 
-    return Resize(res);
+    return Resize(res.first);
   }
 
   late String id;
@@ -254,7 +291,7 @@ class ItemCurrentLayout implements ItemLayout {
   }
 
   bool get isBottomSide {
-    var last = (_layoutController._endsTree.max).value;
+    var last = (_layoutController._endsTree.lastKey())!;
     var lIn = _layoutController.getIndexCoordinate(last);
     return _layoutController.getIndexCoordinate(_endIndex)[1] == lIn[1];
   }
