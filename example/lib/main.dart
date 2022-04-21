@@ -41,7 +41,7 @@ class _MyAppState extends State<MyApp> {
         startY: 2,
         width: 4,
         height: 2,
-        minWidth: 1),
+        minWidth: 2),
     DashboardItem(
         identifier: "c",
         startX: 1,
@@ -124,25 +124,26 @@ class _DashboardWidgetState extends State<DashboardWidget> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Dashboard(
-        shrinkToPlace: false,
-        slideToTop: false,
+        shrinkToPlace: true,
+        slideToTop: true,
         padding: const EdgeInsets.all(16),
         mainAxisSpace: 8,
         crossAxisSpace: 8,
         dashboardItemController: widget.itemController,
-        slotCount: 4,
+        slotCount: 5,
         editModeSettings: const EditModeSettings(
-            resizeCursorSide: 30,
+            resizeCursorSide: 15,
+            fillBackgroundAnimationDuration: Duration(milliseconds: 200),
             foregroundStyle: EditModeForegroundStyle(
                 fillColor: Colors.black12,
-                sideWidth: 10,
+                sideWidth: 1,
                 innerRadius: 8,
                 outherRadius: 8,
                 shadowColor: Colors.transparent,
                 shadowTransparentOccluder: true),
             backgroundStyle: EditModeBackgroundStyle(
                 lineColor: Colors.black38,
-                lineWidth: 1,
+                lineWidth: 0.5,
                 doubleLineHorizontal: true,
                 doubleLineVertical: true)),
         itemBuilder: (DashboardItem item, ItemCurrentLayout layout) {

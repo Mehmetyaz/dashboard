@@ -4,7 +4,6 @@ class DashboardItemController<T> {
   DashboardItemController(
       {required List<DashboardItem<T>> items,
       this.onNewLayout,
-      this.editMode = const EditMode(),
       this.allowEdit = true})
       : _items = items
             .asMap()
@@ -12,9 +11,6 @@ class DashboardItemController<T> {
 
   ///
   final bool allowEdit;
-
-  ///
-  final EditMode editMode;
 
   bool get isEditing => _layoutController!.isEditing;
 
@@ -110,33 +106,36 @@ class DashboardLayoutController<T> with ChangeNotifier {
 
   EditSession? editSession;
 
-  void startEdit(String id) {
-    editSession = EditSession(layoutController: this, editing: _layouts[id]!);
+  void startEdit(String id, bool transform) {
+    editSession = EditSession(
+        layoutController: this, editing: _layouts[id]!, transform: transform);
   }
 
   void saveEditSession() {
-    if (editSession?.isEqual ?? false) {
-      // cancelEditSession();
+    if (editSession == null) return;
+    if (editSession!.isEqual) {
+      cancelEditSession();
       editSession = null;
       notifyListeners();
     } else {
       //Notify storage
       editSession = null;
-      _layouts.forEach((key, value) {
-        value._mount(this, key);
-      });
+      // _layouts.forEach((key, value) {
+      //   value._mount(this, key);
+      // });
       notifyListeners();
     }
   }
 
-  // void cancelEditSession() {
-  //   if (editSession == null) return;
-  //   _layouts.forEach((key, value) {
-  //     value._mount(this, key);
-  //   });
-  //   editSession = null;
-  //   notifyListeners();
-  // }
+  void cancelEditSession() {
+    if (editSession == null) return;
+
+    _layouts.forEach((key, value) {
+      value._mount(this, key);
+    });
+    editSession = null;
+    notifyListeners();
+  }
 
   ///
   late Axis _axis;
@@ -153,29 +152,76 @@ class DashboardLayoutController<T> with ChangeNotifier {
   }
 
   ///
-  List<int> getOverflows(ItemLayout itemLayout) {
-    var l = <List<int>>[];
+  List<int?> getOverflows(ItemLayout itemLayout) {
+    var possibilities = <OverflowPossibility>[];
 
     var y = itemLayout.startY;
     var eX = itemLayout.startX + itemLayout.width;
     var eY = itemLayout.startY + itemLayout.height;
 
+    int? blockX, blockY;
+
+    int? minX, minY;
+
     while (y < eY) {
       var x = itemLayout.startX;
-
       xLoop:
       while (x < eX) {
         if (x >= slotCount || _indexesTree.containsKey(getIndex([x, y]))) {
-          l.add([x, y]);
-          break xLoop;
+          if (y == itemLayout.startY) {
+            return [itemLayout.startX, itemLayout.startY];
+          }
+
+          if (x == itemLayout.startX) {
+            possibilities.sort((a, b) => b.compareTo(a));
+
+            if (possibilities.isEmpty) {
+              print("burası");
+              return [null, y];
+            }
+            print("burası 2");
+            var p = possibilities.first;
+
+            return [p.x, p.y];
+          }
+
+          var nw = x - itemLayout.startX;
+          var nh = y - itemLayout.startY;
+          if (itemLayout.maxWidth != null && nw > itemLayout.maxWidth!) {
+            possibilities.add(OverflowPossibility(
+                x, y, x - itemLayout.startX, y - itemLayout.startY));
+            break xLoop;
+          }
+
+          if (itemLayout.maxHeight != null && nh > itemLayout.maxHeight!) {
+            possibilities.add(OverflowPossibility(
+                x, y, x - itemLayout.startX, y - itemLayout.startY));
+            break xLoop;
+          }
+
+          if ((nw >= itemLayout.minWidth && nh >= itemLayout.minHeight)) {
+            possibilities.add(OverflowPossibility(
+                x, y, x - itemLayout.startX, y - itemLayout.startY));
+            break xLoop;
+          }
         }
         x++;
       }
       y++;
     }
-    if (l.isEmpty) return [];
-    l.sort((a, b) => a[0].compareTo(b[0]));
-    return [l.length > 1 ? l[1][0] : l[0][0], l[0][1]];
+    print("burası 3");
+    possibilities.sort((a, b) => b.compareTo(a));
+
+    if (possibilities.isEmpty) {
+      return [null, null];
+    }
+
+    var p = possibilities.first;
+
+    return [p.x, p.y];
+
+    return [minX, minY];
+    /*return [blockX, blockY];*/
   }
 
   void _removeFromIndexes(ItemLayout itemLayout, String id) {
@@ -229,7 +275,7 @@ class DashboardLayoutController<T> with ChangeNotifier {
   }
 
   ///
-  ItemLayout? tryMount(int value, ItemLayout itemLayout, String id) {
+  ItemLayout? tryMount(int value, ItemLayout itemLayout) {
     var r = getIndexCoordinate(value);
     var n = itemLayout.copyWithStarts(startX: r[0], startY: r[1]);
     while (true) {
@@ -244,12 +290,16 @@ class DashboardLayoutController<T> with ChangeNotifier {
       } else {
         // Fit viewport
         var overflows = getOverflows(n);
-        if (overflows.isEmpty) {
+        // if (kDebugMode) {
+        //   print(overflows);
+        // }
+        if (overflows.where((element) => element != null).isEmpty) {
           return n;
         } else {
           if (shrinkToPlace) {
-            var eX = overflows[0];
-            var eY = overflows[1];
+            var eX = overflows[0] ?? (n.startX + n.width);
+            var eY = overflows[1] ?? (n.startY + n.height);
+
             if (eX - n.startX >= n.minWidth && eY - n.startY >= n.minHeight) {
               return n.copyWithDimension(
                   width: eX - n.startX, height: eY - n.startY);
@@ -270,7 +320,7 @@ class DashboardLayoutController<T> with ChangeNotifier {
     _removeFromIndexes(itemCurrent, id);
     var i = 0;
     while (true) {
-      var nLayout = tryMount(i, itemCurrent.origin, id);
+      var nLayout = tryMount(i, itemCurrent.origin);
       if (nLayout != null) {
         _indexItem(nLayout, id);
         break;
@@ -315,8 +365,8 @@ class DashboardLayoutController<T> with ChangeNotifier {
       }
 
       // can mount given start index
-      var mount = tryMount(
-          getIndex([i.value.startX, i.value.startY]), i.value.origin, i.key);
+      var mount =
+          tryMount(getIndex([i.value.startX, i.value.startY]), i.value.origin);
 
       if (mount == null) {
         not.add(i.key);
@@ -402,13 +452,32 @@ class DashboardLayoutController<T> with ChangeNotifier {
   bool _isAttached = false;
 }
 
+class OverflowPossibility extends Comparable<OverflowPossibility> {
+  OverflowPossibility(this.x, this.y, this.w, this.h) : sq = w * h;
+
+  int x, y, w, h, sq;
+
+  @override
+  int compareTo(OverflowPossibility other) {
+    return sq.compareTo(other.sq);
+  }
+
+  @override
+  String toString() {
+    return super.toString();
+  }
+}
+
 ///
 class EditSession {
   ///
   EditSession(
       {required DashboardLayoutController layoutController,
-      required this.editing})
+      required this.editing,
+      required this.transform})
       : editingOrigin = editing.copy();
+
+  bool transform;
 
   ///
   bool get isEqual {
@@ -418,6 +487,51 @@ class EditSession {
         editing.height == editingOrigin.height;
 
     return editing.startX == editingOrigin.startX;
+  }
+
+  // final Map<AxisDirection, List<Resizing>> _resizes = {};
+
+  final Map<AxisDirection, Map<String, List<_Change>>> _indirectChanges = {};
+
+  void _addResize(
+      Resize resize, void Function(String id, _Change) onBackChange) {
+    // _resizes[resize.resize.direction] ??= [];
+    // _resizes[resize.resize.direction]!.add(resize.resize);
+    if (resize.resize.increment && resize.indirectResizes != null) {
+      for (var _indirect in resize.indirectResizes!.entries) {
+        _indirectChanges[_indirect.value.direction] ??= {};
+        _indirectChanges[_indirect.value.direction]![_indirect.key] ??= [];
+        _indirectChanges[_indirect.value.direction]![_indirect.key]!
+            .add(_indirect.value);
+      }
+    }
+
+    if (!resize.resize.increment) {
+      var dir = resize.resize.direction;
+      AxisDirection reverseDir;
+      if (dir == AxisDirection.left) {
+        reverseDir = AxisDirection.right;
+      } else if (dir == AxisDirection.right) {
+        reverseDir = AxisDirection.left;
+      } else if (dir == AxisDirection.up) {
+        reverseDir = AxisDirection.down;
+      } else {
+        reverseDir = AxisDirection.up;
+      }
+
+      var reverseIndirectResizes = _indirectChanges[reverseDir];
+
+      if (reverseIndirectResizes == null) {
+        return;
+      } else {
+        for (var _resize in reverseIndirectResizes.entries) {
+          if (_resize.value.isNotEmpty) {
+            onBackChange(
+                _resize.key, _resize.value.removeAt(_resize.value.length - 1));
+          }
+        }
+      }
+    }
   }
 
   ///

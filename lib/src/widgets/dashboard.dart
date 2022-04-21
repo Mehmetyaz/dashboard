@@ -95,7 +95,7 @@ class _DashboardState<T> extends State<Dashboard<T>>
   }
 
   ///
-  late final DashboardLayoutController<T> _layoutController;
+  late DashboardLayoutController<T> _layoutController;
 
   ///
   ViewportOffset? _offset;
@@ -123,17 +123,6 @@ class _DashboardState<T> extends State<Dashboard<T>>
           slotCount: widget.slotCount);
     }
 
-    if (_layoutController._isAttached &&
-        (widget.slotCount != _layoutController.slotCount ||
-            widget.axis != _layoutController._axis)) {
-      _layoutController.attach(
-          shrinkToPlace: widget.shrinkToPlace,
-          slideToTop: widget.slideToTop,
-          slotCount: widget.slotCount,
-          itemController: widget.dashboardItemController,
-          axis: widget.axis);
-    }
-
     _layoutController
         ._setSizes(_layoutController._viewportDelegate.resolvedConstrains);
     _offset = o;
@@ -157,20 +146,18 @@ class _DashboardState<T> extends State<Dashboard<T>>
   late double _maxExtend;
 
   ///
-  double base = 150;
-
-  ///
-  Duration duration = const Duration(milliseconds: 200);
-
-  ///
   final GlobalKey<_DashboardStackState> _stateKey = GlobalKey();
+
+  bool scrollable = true;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constrains) {
       Unbounded.check(widget.axis, constrains);
       return Scrollable(
-          physics: widget.physics,
+          physics: scrollable
+              ? widget.physics
+              : const NeverScrollableScrollPhysics(),
           controller: widget.scrollController,
           semanticChildCount: widget.dashboardItemController._items.length,
           dragStartBehavior:
@@ -182,6 +169,11 @@ class _DashboardState<T> extends State<Dashboard<T>>
               _stateKey.currentState?._listenOffset(o);
             });
             return _DashboardStack<T>(
+                onScrollStateChange: (st) {
+                  setState(() {
+                    scrollable = st;
+                  });
+                },
                 maxScrollOffset: _maxExtend,
                 editModeSettings: widget.editModeSettings,
                 cacheExtend: widget.cacheExtend,
@@ -194,175 +186,17 @@ class _DashboardState<T> extends State<Dashboard<T>>
   }
 }
 
-class _DashboardItemWidget extends StatefulWidget {
-  const _DashboardItemWidget(
-      {Key? key,
-      required this.layoutController,
-      required this.child,
-      required this.editModeSettings,
-      required this.id,
-      required this.itemCurrentLayout,
-      required this.currentPosition})
-      : super(key: key);
-
-  final ItemCurrentLayout itemCurrentLayout;
-  final Widget child;
-  final String id;
-  final DashboardLayoutController layoutController;
-  final EditModeSettings editModeSettings;
-  final ItemCurrentPosition currentPosition;
+class _ItemCurrentPositionTween extends Tween<ItemCurrentPosition> {
+  _ItemCurrentPositionTween(
+      {required ItemCurrentPosition begin, required ItemCurrentPosition end})
+      : super(begin: begin, end: end);
 
   @override
-  State<_DashboardItemWidget> createState() => _DashboardItemWidgetState();
-}
-
-class _DashboardItemWidgetState extends State<_DashboardItemWidget> {
-  late MouseCursor cursor;
-
-  // late double leftPad, rightPad, topPad, bottomPad;
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
-  void initState() {
-    cursor = MouseCursor.defer;
-    super.initState();
-  }
-
-  ItemCurrentPosition get _resizePosition =>
-      widget.itemCurrentLayout._resizePosition.value;
-
-  bool onRightSide(double dX) =>
-      dX >
-      (widget.currentPosition.width + _resizePosition.width) -
-          widget.editModeSettings.resizeCursorSide;
-
-  bool onLeftSide(double dX) =>
-      (dX + _resizePosition.x) < widget.editModeSettings.resizeCursorSide;
-
-  bool onTopSide(double dY) =>
-      (dY + _resizePosition.y) < widget.editModeSettings.resizeCursorSide;
-
-  bool onBottomSide(double dY) =>
-      dY >
-      (widget.currentPosition.height + _resizePosition.height) -
-          widget.editModeSettings.resizeCursorSide;
-
-  void _hover(PointerHoverEvent hover) {
-    var x = hover.localPosition.dx;
-    var y = hover.localPosition.dy;
-    MouseCursor _cursor;
-    var r = onRightSide(x);
-    var l = onLeftSide(x);
-    var t = onTopSide(y);
-    var b = onBottomSide(y);
-    if (r) {
-      if (b) {
-        _cursor = SystemMouseCursors.resizeUpLeftDownRight;
-      } else if (t) {
-        _cursor = SystemMouseCursors.resizeUpRightDownLeft;
-      } else {
-        _cursor = SystemMouseCursors.resizeLeftRight;
-      }
-    } else if (l) {
-      if (b) {
-        _cursor = SystemMouseCursors.resizeUpRightDownLeft;
-      } else if (t) {
-        _cursor = SystemMouseCursors.resizeUpLeftDownRight;
-      } else {
-        _cursor = SystemMouseCursors.resizeLeftRight;
-      }
-    } else if (b || t) {
-      _cursor = SystemMouseCursors.resizeUpDown;
-    } else {
-      _cursor = SystemMouseCursors.move;
-    }
-    if (_cursor != cursor) {
-      setState(() {
-        cursor = _cursor;
-      });
-    }
-  }
-
-  void _exit(PointerExitEvent exit) {
-    setState(() {
-      cursor = MouseCursor.defer;
-    });
-  }
-
-  Offset transform = Offset.zero;
-
-  Offset? panStart;
-
-  double scrollOffset = 0;
-
-  double startScrollOffset = 0;
-
-  ItemCurrentLayout get l => widget.itemCurrentLayout;
-
-  //late BoxConstraints c;
-
-  double get slotEdge => widget.layoutController.slotEdge;
-
-  @override
-  Widget build(BuildContext context) {
-    // leftPad = l.isLeftSide ? 0.0 : widget.crossAxisSpace / 2;
-    // rightPad = l.isRightSide ? 0.0 : widget.crossAxisSpace / 2;
-    // topPad = l.isTopSide ? 0.0 : widget.mainAxisSpace / 2;
-    // bottomPad = l.isBottomSide ? 0.0 : widget.mainAxisSpace / 2;
-    // c = BoxConstraints(
-    //     maxWidth: l.width * slotEdge - rightPad - leftPad,
-    //     maxHeight: l.height * slotEdge - topPad - bottomPad);
-
-    Widget result = Material(
-      elevation: 10,
-      child: widget.child,
-      color: Colors.transparent,
-      type: MaterialType.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    );
-
-    if (widget.layoutController.isEditing) {
-      result = AbsorbPointer(child: result);
-
-      if (kIsWeb) {
-        result = MouseRegion(
-          cursor: cursor,
-          onHover: _hover,
-          onExit: _exit,
-          child: result,
-        );
-      }
-    }
-
-    return ValueListenableBuilder<ItemCurrentPosition>(
-        valueListenable: widget.itemCurrentLayout._resizePosition,
-        builder: (__, p, w) {
-          return ValueListenableBuilder<Offset>(
-              child: result,
-              valueListenable: widget.itemCurrentLayout._transform,
-              builder: (_, o, w) {
-                var cp = widget.currentPosition + p;
-                return Positioned(
-                    left: cp.x + o.dx,
-                    top: cp.y + o.dy,
-                    width: cp.width,
-                    height: cp.height,
-                    child: widget.layoutController.isEditing
-                        ? CustomPaint(
-                            child: w!,
-                            foregroundPainter: EditModeItemPainter(
-                                style: widget.editModeSettings.foregroundStyle,
-                                tolerance:
-                                    widget.editModeSettings.resizeCursorSide,
-                                constraints: BoxConstraints(
-                                    maxHeight: cp.height, maxWidth: cp.width)),
-                          )
-                        : w!);
-              });
-        });
+  ItemCurrentPosition lerp(double t) {
+    return ItemCurrentPosition(
+        width: begin!.width * (1.0 - t) + end!.width * t,
+        height: begin!.height * (1.0 - t) + end!.height * t,
+        x: begin!.x * (1.0 - t) + end!.x * t,
+        y: begin!.y * (1.0 - t) + end!.y * t);
   }
 }

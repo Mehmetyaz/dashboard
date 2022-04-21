@@ -21,85 +21,140 @@ class ItemCurrentPosition {
         x: x + other.x);
   }
 
+  bool equal(ItemCurrentPosition other) {
+    return x == other.x &&
+        y == other.y &&
+        width == other.width &&
+        height == other.height;
+  }
+
   @override
   String toString() {
     return "ITEM_CURRENT($x, $y , $width , $height)";
   }
 }
 
-class Resizing {
-  Resizing(this.direction, this.increment);
+abstract class _Change {
+  _Change(this.direction, this.increment);
+
+  ItemLayout back(ItemLayout layout);
 
   AxisDirection direction;
   bool increment;
+}
+
+class Resizing extends _Change {
+  Resizing(AxisDirection direction, bool increment)
+      : super(direction, increment);
 
   @override
   String toString() {
-    return "${increment ? "increment" : "decrement"} $direction";
+    return "RESIZE ${increment ? "increment" : "decrement"} $direction";
+  }
+
+  @override
+  ItemLayout back(ItemLayout layout) {
+    int x = layout.startX,
+        y = layout.startY,
+        w = layout.width,
+        h = layout.height;
+    if (direction == AxisDirection.left) {
+      x -= 1;
+      w += 1;
+    } else if (direction == AxisDirection.right) {
+      w += 1;
+    } else if (direction == AxisDirection.up) {
+      y -= 1;
+      h += 1;
+    } else {
+      h += 1;
+    }
+    return ItemLayout(startX: x, startY: y, width: w, height: h);
+  }
+}
+
+class Moving extends _Change {
+  Moving(AxisDirection direction, bool increment) : super(direction, increment);
+
+  @override
+  String toString() {
+    return "MOVE: ${increment ? "increment" : "decrement"} $direction";
+  }
+
+  @override
+  ItemLayout back(ItemLayout layout) {
+
+    int x = layout.startX, y = layout.startY;
+    if (direction == AxisDirection.left) {
+      x -= 1;
+    } else if (direction == AxisDirection.right) {
+      x += 1;
+    } else if (direction == AxisDirection.up) {
+      y -= 1;
+    } else {
+      y += 1;
+    }
+    return ItemLayout(
+        startX: x, startY: y, width: layout.width, height: layout.height);
   }
 }
 
 class Resize {
-  Resize(this.resize);
+  Resize(this.resize, {this.indirectResizes});
 
   Resizing resize;
 
-  late Offset adjustedDif;
-  late ItemCurrentPosition adjustedPosition;
+  Map<String, _Change>? indirectResizes;
 
-  void adjustResizeOffset(Offset local, double slotEdge,
-      ItemCurrentPosition difPos, double startScroll) {
-    var pos = ItemCurrentPosition(height: 0, width: 0, y: 0, x: 0);
-    var difOffset = Offset(local.dx, local.dy);
+  late Offset offsetDifference;
+  late ItemCurrentPosition positionDifference;
+
+  void adjustResizeOffset(double slotEdge, ItemCurrentPosition difPos) {
+    Offset? difOffset;
     if (resize.increment) {
       if (resize.direction == AxisDirection.left) {
-        pos
+        difPos
           ..x += slotEdge
-          ..width -= slotEdge
-          ..y += difPos.y
-          ..height -= difPos.y;
-        difOffset += Offset(-slotEdge, -difPos.y);
+          ..width -= slotEdge;
+        difOffset = Offset(-slotEdge, 0);
       } else if (resize.direction == AxisDirection.up) {
-        pos
+        difPos
           ..y += slotEdge
-          ..height -= slotEdge
-          ..x += difPos.x
-          ..width -= difPos.x;
-        difOffset += Offset(-difPos.x, -slotEdge);
+          ..height -= slotEdge;
+        difOffset = Offset(0, -slotEdge);
       } else if (resize.direction == AxisDirection.right) {
-        pos
-          ..width -= slotEdge
-          ..height += difPos.height;
-        difOffset += Offset(slotEdge, -difPos.height);
+        difPos.width -= slotEdge;
+        difOffset = Offset(slotEdge, 0);
       } else {
-        pos
-          ..height -= slotEdge
-          ..width += difPos.width;
-        difOffset += Offset(-difPos.width, slotEdge);
+        difPos.height -= slotEdge;
+        difOffset = Offset(0, slotEdge);
       }
     } else {
       if (resize.direction == AxisDirection.left) {
-        pos
-          ..y += difPos.y
-          ..height -= difPos.y;
-        difOffset += Offset(0, -difPos.y);
+        difPos.x += 0;
+        difOffset = Offset(slotEdge, 0);
       } else if (resize.direction == AxisDirection.up) {
-        pos
-          ..x += difPos.x
-          ..width -= difPos.x;
-        difOffset += Offset(-difPos.x, 0);
+        difPos.y += 0;
+        difOffset = Offset(0, slotEdge);
       } else if (resize.direction == AxisDirection.right) {
-        pos.height += difPos.height;
-        difOffset += Offset(0, -difPos.height);
+        difOffset = Offset(-slotEdge, 0);
       } else {
-        pos.width += difPos.width;
-        difOffset += Offset(-difPos.width, 0);
+        difOffset = Offset(0, -slotEdge);
       }
     }
 
-    adjustedDif = difOffset;
-    adjustedPosition = pos;
+    offsetDifference = difOffset;
+    positionDifference = difPos;
   }
+}
+
+class ResizeMoveResult {
+  ResizeMoveResult();
+
+  /// Move start offset
+  Offset startDifference = const Offset(0, 0);
+
+  bool isChanged = false;
 }
 
 ///
@@ -111,6 +166,8 @@ class ItemCurrentLayout implements ItemLayout {
   ValueNotifier<ItemCurrentPosition> _resizePosition =
       ValueNotifier(ItemCurrentPosition(y: 0, x: 0, height: 0, width: 0));
 
+  late GlobalKey<_DashboardItemWidgetState> _key;
+
   @override
   String toString() {
     return "current: (startX: $startX , startY: $startY , width: $width , height: $height)"
@@ -118,9 +175,7 @@ class ItemCurrentLayout implements ItemLayout {
   }
 
   ItemCurrentPosition currentPosition(
-      {required double offset,
-      required ViewportDelegate viewportDelegate,
-      required double slotEdge}) {
+      {required ViewportDelegate viewportDelegate, required double slotEdge}) {
     var leftPad = isLeftSide ? 0.0 : viewportDelegate.crossAxisSpace / 2;
     var rightPad = isRightSide ? 0.0 : viewportDelegate.crossAxisSpace / 2;
     var topPad = isTopSide ? 0.0 : viewportDelegate.mainAxisSpace / 2;
@@ -128,9 +183,7 @@ class ItemCurrentLayout implements ItemLayout {
     return ItemCurrentPosition(
         height: height * slotEdge - topPad - bottomPad,
         width: width * slotEdge - rightPad - leftPad,
-        y: ((startY * (slotEdge)) - offset) +
-            viewportDelegate.padding.top +
-            topPad,
+        y: ((startY * (slotEdge))) + viewportDelegate.padding.top + topPad,
         x: (startX * slotEdge) + viewportDelegate.padding.left + leftPad);
   }
 
@@ -164,24 +217,127 @@ class ItemCurrentLayout implements ItemLayout {
     );
   }
 
-  bool sideIsEmpty(AxisDirection direction) {
+  ResizeMoveResult _resizeMove(
+      {required List<AxisDirection> holdDirections,
+      required Offset local,
+      required Offset start,
+      required double scrollDifference}) {
+    var difference = local - start;
+    difference += Offset(0, scrollDifference);
+    if (holdDirections.isEmpty || (difference == Offset.zero)) {
+      return ResizeMoveResult();
+    }
+
+    var result = ResizeMoveResult();
+
+    var itemPositionDifference =
+        ItemCurrentPosition(height: 0, width: 0, y: 0, x: 0);
+
+    if (holdDirections.contains(AxisDirection.left)) {
+      Resizing? resizing;
+
+      if (difference.dx < 0) {
+        resizing = (Resizing(AxisDirection.left, true));
+      } else if (difference.dx > _slotEdge) {
+        resizing = (Resizing(AxisDirection.left, false));
+      }
+
+      var res = tryResize(resizing);
+      if (res != null) {
+        itemPositionDifference =
+            _saveResizeResult(res, itemPositionDifference, result);
+      } else {
+        var dx = _clampDifLeft(difference.dx);
+        itemPositionDifference.x += dx;
+        itemPositionDifference.width -= dx;
+      }
+    }
+    if (holdDirections.contains(AxisDirection.up)) {
+      Resizing? resizing;
+
+      if (difference.dy < 0) {
+        resizing = (Resizing(AxisDirection.up, true));
+      } else if (difference.dy > _slotEdge) {
+        resizing = (Resizing(AxisDirection.up, false));
+      }
+      var res = tryResize(resizing);
+      if (res != null) {
+        itemPositionDifference =
+            _saveResizeResult(res, itemPositionDifference, result);
+      } else {
+        var dy = _clampDifTop(difference.dy);
+        itemPositionDifference.y += dy;
+        itemPositionDifference.height -= dy;
+      }
+    }
+
+    if (holdDirections.contains(AxisDirection.right)) {
+      Resizing? resizing;
+
+      if (difference.dx < -_slotEdge) {
+        resizing = (Resizing(AxisDirection.right, false));
+      } else if (difference.dx > 0) {
+        resizing = (Resizing(AxisDirection.right, true));
+      }
+      var res = tryResize(resizing);
+      if (res != null) {
+        _saveResizeResult(res, itemPositionDifference, result);
+      } else {
+        var dx = _clampDifRight(difference.dx);
+        itemPositionDifference.width += dx;
+      }
+    }
+
+    if (holdDirections.contains(AxisDirection.down)) {
+      Resizing? resizing;
+      //BOTTOM
+      if (difference.dy < -_slotEdge) {
+        resizing = (Resizing(AxisDirection.down, false));
+      } else if (difference.dy > 0) {
+        resizing = (Resizing(AxisDirection.down, true));
+      }
+      var res = tryResize(resizing);
+      if (res != null) {
+        _saveResizeResult(res, itemPositionDifference, result);
+      } else {
+        var dy = _clampDifBottom(difference.dy);
+        itemPositionDifference.height += dy;
+      }
+    }
+    _resizePosition.value = itemPositionDifference;
+    return result;
+  }
+
+  ItemCurrentPosition _saveResizeResult(Resize res,
+      ItemCurrentPosition itemPositionDifference, ResizeMoveResult result) {
+    save();
+    res.adjustResizeOffset(_slotEdge, itemPositionDifference);
+    result.startDifference += res.offsetDifference;
+    result.isChanged = true;
+    return res.positionDifference;
+  }
+
+  /// If side is layout bound returns null
+  List<ItemCurrentLayout>? sideItems(AxisDirection direction) {
+    var sideItemsIds = <String>[];
+
     List<int> sideIndexes;
 
     if (direction == AxisDirection.left) {
       if (startX == 0) {
-        return false;
+        return null;
       }
       sideIndexes = _layoutController.getItemIndexes(ItemLayout(
           startX: startX - 1, startY: startY, width: 1, height: height));
     } else if (direction == AxisDirection.right) {
       if ((startX + width) >= _layoutController.slotCount) {
-        return false;
+        return null;
       }
       sideIndexes = _layoutController.getItemIndexes(ItemLayout(
           startX: startX + width, startY: startY, width: 1, height: height));
     } else if (direction == AxisDirection.up) {
       if (startY == 0) {
-        return false;
+        return null;
       }
       sideIndexes = _layoutController.getItemIndexes(ItemLayout(
           startX: startX, startY: startY - 1, width: width, height: 1));
@@ -190,82 +346,287 @@ class ItemCurrentLayout implements ItemLayout {
           startX: startX, startY: startY + height, width: width, height: 1));
     }
 
-    var res = false;
     for (var i in sideIndexes) {
-      res = _layoutController._indexesTree.containsKey(i);
-      if (res) return false;
-    }
-    return !res;
-  }
-
-  Resize? tryResize(List<Resizing> resizes) {
-    var res = <Resizing>[];
-
-    for (var resize in resizes) {
-      var direction = resize.direction;
-      if (resize.increment) {
-        if (sideIsEmpty(direction)) {
-          if (direction == AxisDirection.left) {
-            if ((maxWidth == null || width < maxWidth!) &&
-                width < _layoutController.slotCount) {
-              _startX = startX - 1;
-              _width = width + 1;
-              res.add(resize);
-            }
-          } else if (direction == AxisDirection.right) {
-            if ((maxWidth == null || width < maxWidth!) &&
-                width < _layoutController.slotCount) {
-              _width = width + 1;
-              res.add(resize);
-            }
-          } else if (direction == AxisDirection.up) {
-            if ((maxHeight == null || height < maxHeight!)) {
-              _startY = startY - 1;
-              _height = height + 1;
-              res.add(resize);
-            }
-          } else {
-            if (maxHeight == null || height < maxHeight!) {
-              _height = height + 1;
-              res.add(resize);
-            }
-          }
-        }
-      } else {
-        //decrement size by direction
-        if (direction == AxisDirection.up) {
-          if (minHeight < height) {
-            _height = height - 1;
-            _startY = startY + 1;
-            res.add(resize);
-          }
-        } else if (direction == AxisDirection.down) {
-          if (minHeight < height) {
-            _height = height - 1;
-            res.add(resize);
-          }
-        } else if (direction == AxisDirection.left) {
-          if (minWidth < width) {
-            _width = width - 1;
-            _startX = startX + 1;
-            res.add(resize);
-          }
-        } else if (direction == AxisDirection.right) {
-          if (minWidth < width) {
-            _width = width - 1;
-            res.add(resize);
-          }
-        } else {
-          throw 0;
-        }
+      var item = _layoutController._indexesTree[i];
+      if (item != null && !sideItemsIds.contains(item)) {
+        sideItemsIds.add(item);
       }
     }
 
-    if (res.isEmpty) {
-      return null;
+    return sideItemsIds.map((e) => _layoutController._layouts[e]!).toList();
+  }
+
+  _Change? tryDecrementOrMoveTo(AxisDirection direction) {
+    AxisDirection reverseDir;
+    switch (direction) {
+      case AxisDirection.up:
+        reverseDir = AxisDirection.down;
+        break;
+      case AxisDirection.right:
+        reverseDir = AxisDirection.left;
+        break;
+      case AxisDirection.down:
+        reverseDir = AxisDirection.up;
+        break;
+      case AxisDirection.left:
+        reverseDir = AxisDirection.right;
+        break;
     }
 
-    return Resize(res.first);
+    var side = sideItems(direction);
+
+
+    if (side != null && side.isEmpty) {
+      if (direction == AxisDirection.left) {
+        _startX = startX - 1;
+        return Moving(reverseDir, false);
+      } else if (direction == AxisDirection.right) {
+        _startX = startX + 1;
+        return Moving(reverseDir, true);
+      } else if (direction == AxisDirection.up) {
+        _startY = startY - 1;
+        return Moving(reverseDir, false);
+      } else {
+        _startY = startY + 1;
+        return Moving(reverseDir, true);
+      }
+    }
+
+    var resize = Resizing(reverseDir, false);
+    if (reverseDir == AxisDirection.up) {
+      if (minHeight < height) {
+        _height = height - 1;
+        _startY = startY + 1;
+        return resize;
+      }
+    } else if (reverseDir == AxisDirection.down) {
+      if (minHeight < height) {
+        _height = height - 1;
+        return resize;
+      }
+    } else if (reverseDir == AxisDirection.left) {
+      if (minWidth < width) {
+        _width = width - 1;
+        _startX = startX + 1;
+        return (resize);
+      }
+    } else {
+      // right
+      if (minWidth < width) {
+        _width = width - 1;
+        return (resize);
+      }
+    }
+
+    return null;
+  }
+
+  void _backResize(_Change change) {
+    var res = change.back(ItemLayout(
+        startX: startX, startY: startY, width: width, height: height));
+
+    _startX = res.startX;
+    _startY = res.startY;
+    _width = res.width;
+    _height = res.height;
+
+    return;
+  }
+
+  Resize? tryResize(Resizing? resize) {
+    if (resize == null) return null;
+    var direction = resize.direction;
+    if (resize.increment) {
+      var _sideItems = sideItems(direction);
+      if (_sideItems == null) {
+        return null;
+      } else if (_sideItems.isEmpty) {
+        if (direction == AxisDirection.left) {
+          if ((maxWidth == null || width < maxWidth!) &&
+              width < _layoutController.slotCount) {
+            _startX = startX - 1;
+            _width = width + 1;
+            return Resize(resize);
+          }
+        } else if (direction == AxisDirection.right) {
+          if ((maxWidth == null || width < maxWidth!) &&
+              width < _layoutController.slotCount) {
+            _width = width + 1;
+            return Resize(resize);
+          }
+        } else if (direction == AxisDirection.up) {
+          if ((maxHeight == null || height < maxHeight!)) {
+            _startY = startY - 1;
+            _height = height + 1;
+            return Resize(resize);
+          }
+        } else {
+          if (maxHeight == null || height < maxHeight!) {
+            _height = height + 1;
+            return Resize(resize);
+          }
+        }
+      } else {
+        Map<String, _Change> _indirectResizing = {};
+
+        for (var sideItem in _sideItems) {
+          var res = sideItem.tryDecrementOrMoveTo(direction);
+
+          if (res == null) {
+            _indirectResizing.forEach((key, value) {
+              _layoutController._layouts[key]?._backResize(value);
+              _layoutController._layouts[key]?.save();
+            });
+            _indirectResizing.clear();
+            break;
+          }
+          _indirectResizing[sideItem.id] = res;
+        }
+
+        if (_indirectResizing.isEmpty) return null;
+
+        _indirectResizing.forEach((key, value) {
+          _layoutController._layouts[key]?.save();
+        });
+
+        Resize? result;
+
+        if (direction == AxisDirection.left) {
+          if ((maxWidth == null || width < maxWidth!) &&
+              width < _layoutController.slotCount) {
+            _startX = startX - 1;
+            _width = width + 1;
+            result = Resize(resize, indirectResizes: _indirectResizing);
+          }
+        } else if (direction == AxisDirection.right) {
+          if ((maxWidth == null || width < maxWidth!) &&
+              width < _layoutController.slotCount) {
+            _width = width + 1;
+            result = Resize(resize, indirectResizes: _indirectResizing);
+          }
+        } else if (direction == AxisDirection.up) {
+          if ((maxHeight == null || height < maxHeight!)) {
+            _startY = startY - 1;
+            _height = height + 1;
+            result = Resize(resize, indirectResizes: _indirectResizing);
+          }
+        } else {
+          if (maxHeight == null || height < maxHeight!) {
+            _height = height + 1;
+            result = Resize(resize, indirectResizes: _indirectResizing);
+          }
+        }
+
+        if (result == null) {
+          _indirectResizing.forEach((key, value) {
+            _layoutController._layouts[key]?._backResize(value);
+            _layoutController._layouts[key]?.save();
+          });
+
+          return null;
+        } else {
+          _layoutController.editSession!._addResize(result, (i, p1) {
+            _layoutController._layouts[i]?._backResize(p1);
+            _layoutController._layouts[i]?.save();
+          });
+
+          return result;
+        }
+      }
+    } else {
+      Resize? result;
+
+      //decrement size by direction
+      if (direction == AxisDirection.up) {
+        if (minHeight < height) {
+          _height = height - 1;
+          _startY = startY + 1;
+          result = Resize(resize);
+        }
+      } else if (direction == AxisDirection.down) {
+        if (minHeight < height) {
+          _height = height - 1;
+          result = Resize(resize);
+        }
+      } else if (direction == AxisDirection.left) {
+        if (minWidth < width) {
+          _width = width - 1;
+          _startX = startX + 1;
+          result = Resize(resize);
+        }
+      } else {
+        // right
+        if (minWidth < width) {
+          _width = width - 1;
+          result = Resize(resize);
+        }
+      }
+
+      if (result != null) {
+        _layoutController.editSession!._addResize(result, (id, p1) {
+          _layoutController._layouts[id]?._backResize(p1);
+          _layoutController._layouts[id]?.save();
+        });
+        return result;
+      }
+    }
+    return null;
+  }
+
+  bool _onTransformProcess = false;
+
+  List<int>? _originSize;
+
+  ResizeMoveResult? _transformUpdate(
+      Offset offsetDifference, double scrollDifference) {
+    if (_onTransformProcess) return null;
+    _onTransformProcess = true;
+    var newTransform = offsetDifference + Offset(0, scrollDifference);
+
+    var newStartX = ((newTransform.dx / _slotEdge).floor() + origin.startX)
+        .clamp(0, _layoutController.slotCount - 1);
+    var newStartY = ((newTransform.dy / _slotEdge).floor() + origin.startY)
+        .clamp(0, 9999999999999);
+
+    if ((newStartX != startX || newStartY != startY)) {
+      _layoutController._removeFromIndexes(
+          ItemLayout(
+              startX: startX, startY: startY, width: width, height: height),
+          id);
+      var nLayout = _layoutController.tryMount(
+          _layoutController.getIndex([newStartX, newStartY]),
+          ItemLayout(
+              startX: newStartX,
+              startY: newStartY,
+              width: _originSize![0],
+              height: _originSize![1]));
+
+      if (nLayout != null) {
+        var xDif = nLayout.startX - startX;
+        var yDif = nLayout.startY - startY;
+        _startX = nLayout.startX;
+        _startY = nLayout.startY;
+        _width = nLayout.width;
+        _height = nLayout.height;
+        var dif = Offset(xDif * _slotEdge, yDif * _slotEdge);
+
+        _transform.value = newTransform - dif;
+        save();
+        _onTransformProcess = false;
+
+        return ResizeMoveResult()
+          ..isChanged = true
+          ..startDifference = dif;
+      } else {
+        _layoutController._indexItem(
+            ItemLayout(
+                startX: startX, startY: startY, width: width, height: height),
+            id);
+      }
+    }
+    _transform.value = newTransform;
+    _onTransformProcess = false;
+    return null;
   }
 
   late String id;

@@ -21,7 +21,6 @@ part 'widgets/animated_background_painter.dart';
 part 'models/dashboard_item.dart';
 part 'models/viewport_settings.dart';
 
-part 'models/edit.dart';
 
 part 'models/item_current_layout.dart';
 

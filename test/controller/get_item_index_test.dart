@@ -54,7 +54,7 @@ void main() {
     expect(o, [6, 3]);
 
     var nLoc = db.tryMount(
-        12, const ItemLayout(startX: 3, width: 4, startY: 1, height: 3), "id");
+        12, const ItemLayout(startX: 3, width: 4, startY: 1, height: 3));
 
     expect(nLoc!.startX, 3);
     expect(nLoc.startY, 1);
@@ -86,7 +86,7 @@ void main() {
     expect(o, [5, 3]);
 
     var nLoc = db.tryMount(
-        12, const ItemLayout(startX: 3, width: 4, startY: 1, height: 3), "id");
+        12, const ItemLayout(startX: 3, width: 4, startY: 1, height: 3));
 
     expect(nLoc!.startX, 3);
     expect(nLoc.startY, 1);
