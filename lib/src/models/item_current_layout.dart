@@ -83,7 +83,6 @@ class Moving extends _Change {
 
   @override
   ItemLayout back(ItemLayout layout) {
-
     int x = layout.startX, y = layout.startY;
     if (direction == AxisDirection.left) {
       x -= 1;
@@ -95,7 +94,14 @@ class Moving extends _Change {
       y += 1;
     }
     return ItemLayout(
-        startX: x, startY: y, width: layout.width, height: layout.height);
+        startX: x,
+        startY: y,
+        width: layout.width,
+        height: layout.height,
+        maxHeight: layout.maxHeight,
+        maxWidth: layout.maxWidth,
+        minWidth: layout.minWidth,
+        minHeight: layout.minHeight);
   }
 }
 
@@ -109,7 +115,8 @@ class Resize {
   late Offset offsetDifference;
   late ItemCurrentPosition positionDifference;
 
-  void adjustResizeOffset(double slotEdge, ItemCurrentPosition difPos) {
+  void adjustResizeOffset(
+      double slotEdge, double verticalSlotEdge, ItemCurrentPosition difPos) {
     Offset? difOffset;
     if (resize.increment) {
       if (resize.direction == AxisDirection.left) {
@@ -119,15 +126,15 @@ class Resize {
         difOffset = Offset(-slotEdge, 0);
       } else if (resize.direction == AxisDirection.up) {
         difPos
-          ..y += slotEdge
-          ..height -= slotEdge;
-        difOffset = Offset(0, -slotEdge);
+          ..y += verticalSlotEdge
+          ..height -= verticalSlotEdge;
+        difOffset = Offset(0, -verticalSlotEdge);
       } else if (resize.direction == AxisDirection.right) {
         difPos.width -= slotEdge;
         difOffset = Offset(slotEdge, 0);
       } else {
-        difPos.height -= slotEdge;
-        difOffset = Offset(0, slotEdge);
+        difPos.height -= verticalSlotEdge;
+        difOffset = Offset(0, verticalSlotEdge);
       }
     } else {
       if (resize.direction == AxisDirection.left) {
@@ -135,11 +142,11 @@ class Resize {
         difOffset = Offset(slotEdge, 0);
       } else if (resize.direction == AxisDirection.up) {
         difPos.y += 0;
-        difOffset = Offset(0, slotEdge);
+        difOffset = Offset(0, verticalSlotEdge);
       } else if (resize.direction == AxisDirection.right) {
         difOffset = Offset(-slotEdge, 0);
       } else {
-        difOffset = Offset(0, -slotEdge);
+        difOffset = Offset(0, -verticalSlotEdge);
       }
     }
 
@@ -175,20 +182,28 @@ class ItemCurrentLayout implements ItemLayout {
   }
 
   ItemCurrentPosition currentPosition(
-      {required ViewportDelegate viewportDelegate, required double slotEdge}) {
+      {required ViewportDelegate viewportDelegate,
+      required double slotEdge,
+      required double verticalSlotEdge}) {
     var leftPad = isLeftSide ? 0.0 : viewportDelegate.crossAxisSpace / 2;
     var rightPad = isRightSide ? 0.0 : viewportDelegate.crossAxisSpace / 2;
     var topPad = isTopSide ? 0.0 : viewportDelegate.mainAxisSpace / 2;
     var bottomPad = isBottomSide ? 0.0 : viewportDelegate.mainAxisSpace / 2;
     return ItemCurrentPosition(
-        height: height * slotEdge - topPad - bottomPad,
+        height: height * verticalSlotEdge - topPad - bottomPad,
         width: width * slotEdge - rightPad - leftPad,
-        y: ((startY * (slotEdge))) + viewportDelegate.padding.top + topPad,
+        y: ((startY * (verticalSlotEdge))) +
+            viewportDelegate.padding.top +
+            topPad,
         x: (startX * slotEdge) + viewportDelegate.padding.left + leftPad);
   }
 
   double get _slotEdge {
     return _layoutController.slotEdge;
+  }
+
+  double get _verticalSlotEdge {
+    return _layoutController.verticalSlotEdge;
   }
 
   double _clampDifLeft(double x) {
@@ -205,23 +220,25 @@ class ItemCurrentLayout implements ItemLayout {
   }
 
   double _clampDifTop(double y) {
-    var _slot = _slotEdge;
+    var _slot = _verticalSlotEdge;
     return y.clamp(0, (height - minHeight) * _slot);
   }
 
   double _clampDifBottom(double y) {
-    var _slot = _slotEdge;
+    var _slot = _verticalSlotEdge;
     return y.clamp(
       (height - minHeight) * -_slot,
       0,
     );
   }
 
-  ResizeMoveResult _resizeMove(
-      {required List<AxisDirection> holdDirections,
-      required Offset local,
-      required Offset start,
-      required double scrollDifference}) {
+  ResizeMoveResult _resizeMove({
+    required List<AxisDirection> holdDirections,
+    required Offset local,
+    required Offset start,
+    required double scrollDifference,
+    required void Function(String id) onChange,
+  }) {
     var difference = local - start;
     difference += Offset(0, scrollDifference);
     if (holdDirections.isEmpty || (difference == Offset.zero)) {
@@ -242,10 +259,11 @@ class ItemCurrentLayout implements ItemLayout {
         resizing = (Resizing(AxisDirection.left, false));
       }
 
-      var res = tryResize(resizing);
+      var res = tryResize(resizing, onChange);
       if (res != null) {
         itemPositionDifference =
             _saveResizeResult(res, itemPositionDifference, result);
+        onChange(id);
       } else {
         var dx = _clampDifLeft(difference.dx);
         itemPositionDifference.x += dx;
@@ -257,13 +275,14 @@ class ItemCurrentLayout implements ItemLayout {
 
       if (difference.dy < 0) {
         resizing = (Resizing(AxisDirection.up, true));
-      } else if (difference.dy > _slotEdge) {
+      } else if (difference.dy > _verticalSlotEdge) {
         resizing = (Resizing(AxisDirection.up, false));
       }
-      var res = tryResize(resizing);
+      var res = tryResize(resizing, onChange);
       if (res != null) {
         itemPositionDifference =
             _saveResizeResult(res, itemPositionDifference, result);
+        onChange(id);
       } else {
         var dy = _clampDifTop(difference.dy);
         itemPositionDifference.y += dy;
@@ -279,9 +298,10 @@ class ItemCurrentLayout implements ItemLayout {
       } else if (difference.dx > 0) {
         resizing = (Resizing(AxisDirection.right, true));
       }
-      var res = tryResize(resizing);
+      var res = tryResize(resizing, onChange);
       if (res != null) {
         _saveResizeResult(res, itemPositionDifference, result);
+        onChange(id);
       } else {
         var dx = _clampDifRight(difference.dx);
         itemPositionDifference.width += dx;
@@ -291,14 +311,15 @@ class ItemCurrentLayout implements ItemLayout {
     if (holdDirections.contains(AxisDirection.down)) {
       Resizing? resizing;
       //BOTTOM
-      if (difference.dy < -_slotEdge) {
+      if (difference.dy < -_verticalSlotEdge) {
         resizing = (Resizing(AxisDirection.down, false));
       } else if (difference.dy > 0) {
         resizing = (Resizing(AxisDirection.down, true));
       }
-      var res = tryResize(resizing);
+      var res = tryResize(resizing, onChange);
       if (res != null) {
         _saveResizeResult(res, itemPositionDifference, result);
+        onChange(id);
       } else {
         var dy = _clampDifBottom(difference.dy);
         itemPositionDifference.height += dy;
@@ -308,10 +329,23 @@ class ItemCurrentLayout implements ItemLayout {
     return result;
   }
 
+  // _saveToEditSession(){
+  //   _layoutController.editSession!._changes[id] = ItemLayout(
+  //       startX: startX,
+  //       startY: startY,
+  //       width: width,
+  //       height: height,
+  //       maxHeight: maxHeight,
+  //       maxWidth: maxWidth,
+  //       minWidth: minWidth,
+  //       minHeight: minHeight);
+  // }
+
   ItemCurrentPosition _saveResizeResult(Resize res,
       ItemCurrentPosition itemPositionDifference, ResizeMoveResult result) {
     save();
-    res.adjustResizeOffset(_slotEdge, itemPositionDifference);
+    res.adjustResizeOffset(
+        _slotEdge, _verticalSlotEdge, itemPositionDifference);
     result.startDifference += res.offsetDifference;
     result.isChanged = true;
     return res.positionDifference;
@@ -353,7 +387,7 @@ class ItemCurrentLayout implements ItemLayout {
       }
     }
 
-    return sideItemsIds.map((e) => _layoutController._layouts[e]!).toList();
+    return sideItemsIds.map((e) => _layoutController._layouts![e]!).toList();
   }
 
   _Change? tryDecrementOrMoveTo(AxisDirection direction) {
@@ -374,7 +408,6 @@ class ItemCurrentLayout implements ItemLayout {
     }
 
     var side = sideItems(direction);
-
 
     if (side != null && side.isEmpty) {
       if (direction == AxisDirection.left) {
@@ -423,17 +456,26 @@ class ItemCurrentLayout implements ItemLayout {
 
   void _backResize(_Change change) {
     var res = change.back(ItemLayout(
-        startX: startX, startY: startY, width: width, height: height));
+        startX: startX,
+        startY: startY,
+        width: width,
+        height: height,
+        minHeight: minHeight,
+        minWidth: minWidth,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight));
 
     _startX = res.startX;
     _startY = res.startY;
     _width = res.width;
     _height = res.height;
+    // origin = ItemLayout(
+    //     startX: startX, startY: startY, width: width, height: height);
 
     return;
   }
 
-  Resize? tryResize(Resizing? resize) {
+  Resize? tryResize(Resizing? resize, void Function(String id) onChange) {
     if (resize == null) return null;
     var direction = resize.direction;
     if (resize.increment) {
@@ -474,8 +516,8 @@ class ItemCurrentLayout implements ItemLayout {
 
           if (res == null) {
             _indirectResizing.forEach((key, value) {
-              _layoutController._layouts[key]?._backResize(value);
-              _layoutController._layouts[key]?.save();
+              _layoutController._layouts![key]?._backResize(value);
+              _layoutController._layouts![key]?.save();
             });
             _indirectResizing.clear();
             break;
@@ -486,7 +528,8 @@ class ItemCurrentLayout implements ItemLayout {
         if (_indirectResizing.isEmpty) return null;
 
         _indirectResizing.forEach((key, value) {
-          _layoutController._layouts[key]?.save();
+          onChange(key);
+          _layoutController._layouts![key]?.save();
         });
 
         Resize? result;
@@ -519,15 +562,16 @@ class ItemCurrentLayout implements ItemLayout {
 
         if (result == null) {
           _indirectResizing.forEach((key, value) {
-            _layoutController._layouts[key]?._backResize(value);
-            _layoutController._layouts[key]?.save();
+            onChange(key);
+            _layoutController._layouts![key]?._backResize(value);
+            _layoutController._layouts![key]?.save();
           });
-
           return null;
         } else {
           _layoutController.editSession!._addResize(result, (i, p1) {
-            _layoutController._layouts[i]?._backResize(p1);
-            _layoutController._layouts[i]?.save();
+            onChange(i);
+            _layoutController._layouts![i]?._backResize(p1);
+            _layoutController._layouts![i]?.save();
           });
 
           return result;
@@ -564,8 +608,9 @@ class ItemCurrentLayout implements ItemLayout {
 
       if (result != null) {
         _layoutController.editSession!._addResize(result, (id, p1) {
-          _layoutController._layouts[id]?._backResize(p1);
-          _layoutController._layouts[id]?.save();
+          onChange(id);
+          _layoutController._layouts![id]?._backResize(p1);
+          _layoutController._layouts![id]?.save();
         });
         return result;
       }
@@ -585,21 +630,27 @@ class ItemCurrentLayout implements ItemLayout {
 
     var newStartX = ((newTransform.dx / _slotEdge).floor() + origin.startX)
         .clamp(0, _layoutController.slotCount - 1);
-    var newStartY = ((newTransform.dy / _slotEdge).floor() + origin.startY)
-        .clamp(0, 9999999999999);
+    var newStartY =
+        ((newTransform.dy / _verticalSlotEdge).floor() + origin.startY)
+            .clamp(0, 9999999999999);
 
     if ((newStartX != startX || newStartY != startY)) {
       _layoutController._removeFromIndexes(
           ItemLayout(
               startX: startX, startY: startY, width: width, height: height),
           id);
+
       var nLayout = _layoutController.tryMount(
           _layoutController.getIndex([newStartX, newStartY]),
           ItemLayout(
               startX: newStartX,
               startY: newStartY,
               width: _originSize![0],
-              height: _originSize![1]));
+              height: _originSize![1],
+              maxHeight: maxHeight,
+              maxWidth: maxWidth,
+              minWidth: minWidth,
+              minHeight: minHeight));
 
       if (nLayout != null) {
         var xDif = nLayout.startX - startX;
@@ -608,7 +659,7 @@ class ItemCurrentLayout implements ItemLayout {
         _startY = nLayout.startY;
         _width = nLayout.width;
         _height = nLayout.height;
-        var dif = Offset(xDif * _slotEdge, yDif * _slotEdge);
+        var dif = Offset(xDif * _slotEdge, yDif * _verticalSlotEdge);
 
         _transform.value = newTransform - dif;
         save();
@@ -620,7 +671,14 @@ class ItemCurrentLayout implements ItemLayout {
       } else {
         _layoutController._indexItem(
             ItemLayout(
-                startX: startX, startY: startY, width: width, height: height),
+                startX: startX,
+                startY: startY,
+                width: width,
+                height: height,
+                minHeight: minHeight,
+                minWidth: minWidth,
+                maxWidth: maxWidth,
+                maxHeight: maxHeight),
             id);
       }
     }
@@ -668,6 +726,7 @@ class ItemCurrentLayout implements ItemLayout {
   ItemLayout origin;
 
   void save() {
+    // _saveToEditSession();
     _layoutController._reIndexItem(
         ItemLayout(
             startX: startX,
@@ -738,7 +797,7 @@ class ItemCurrentLayout implements ItemLayout {
   }
 
   ItemCurrentLayout copy() {
-    return ItemCurrentLayout(origin)
+    return ItemCurrentLayout(origin.copyWithStarts())
       ..indexes = List.from(indexes)
       .._layoutController = _layoutController
       .._endIndex = _endIndex
@@ -762,5 +821,17 @@ class ItemCurrentLayout implements ItemLayout {
   @override
   ItemLayout copyWithDimension({int? width, int? height}) {
     throw UnimplementedError();
+  }
+
+  ItemLayout asLayout() {
+    return ItemLayout(
+        startX: startX,
+        startY: startY,
+        width: width,
+        height: height,
+        minHeight: minHeight,
+        minWidth: minWidth,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight);
   }
 }

@@ -1,7 +1,12 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:dashboard/dashboard.dart';
+
+import 'package:example/storage.dart';
 import 'package:flutter/material.dart';
+
+import 'add_dialog.dart';
 
 ///
 void main() {
@@ -21,79 +26,27 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   ///
-  final ScrollController scrollController = ScrollController();
-
-  ///
-  int count = 7;
-
-  ///
-  final itemController = DashboardItemController<String>(items: [
-    DashboardItem(
-      identifier: "a",
-      startX: 0,
-      startY: 0,
-      width: 2,
-      height: 2,
-    ),
-    DashboardItem(
-        identifier: "b",
-        startX: 0,
-        startY: 2,
-        width: 4,
-        height: 2,
-        minWidth: 2),
-    DashboardItem(
-        identifier: "c",
-        startX: 1,
-        startY: 4,
-        width: 3,
-        height: 1,
-        minWidth: 1,
-        maxWidth: 3),
-    DashboardItem(identifier: "d", startX: 2, startY: 0, width: 1, height: 1),
-    DashboardItem(identifier: "e", startX: 2, startY: 5, width: 2, height: 6),
-    DashboardItem(identifier: "f", startX: 0, startY: 5, width: 2, height: 1),
-    DashboardItem(identifier: "g", startX: 1, startY: 6, width: 1, height: 3),
-  ]);
+  Color getRandomColor() {
+    var r = Random();
+    return Color.fromRGBO(r.nextInt(256), r.nextInt(256), r.nextInt(256), 1);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          actions: [
-            IconButton(
-                onPressed: () {
-                  itemController.setEditMode(!itemController.isEditing);
-                },
-                icon: const Icon(Icons.edit))
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            count++;
-            itemController.add(DashboardItem(
-                identifier: "$count", width: 3, height: 3, minWidth: 2));
-          },
-        ),
-        body: DashboardWidget(itemController: itemController),
-      ),
+      home: const DashboardWidget(),
     );
   }
 }
 
-///
 class DashboardWidget extends StatefulWidget {
   ///
-  const DashboardWidget({Key? key, required this.itemController})
-      : super(key: key);
-
-  ///
-  final DashboardItemController<String> itemController;
+  const DashboardWidget({Key? key}) : super(key: key);
 
   ///
   @override
@@ -102,67 +55,147 @@ class DashboardWidget extends StatefulWidget {
 
 class _DashboardWidgetState extends State<DashboardWidget> {
   ///
-  Color getRandomColor() {
-    var r = Random();
-    return Color.fromRGBO(r.nextInt(256), r.nextInt(256), r.nextInt(256), 1);
-  }
+  final ScrollController scrollController = ScrollController();
 
   ///
-  final Map<String, Color> _colors = const {
-    "a": Colors.red,
-    "b": Colors.yellow,
-    "c": Colors.indigo,
-    "d": Colors.green,
-    "e": Colors.purple,
-    "f": Colors.blue,
-    "g": Colors.teal,
-    "h": Colors.yellowAccent
-  };
+  final itemController =
+      DashboardItemController<ColoredDashboardItem>.withDelegate(
+          itemStorageDelegate: MyItemStorage());
 
   ///
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Dashboard(
-        shrinkToPlace: true,
-        slideToTop: true,
-        padding: const EdgeInsets.all(16),
-        mainAxisSpace: 8,
-        crossAxisSpace: 8,
-        dashboardItemController: widget.itemController,
-        slotCount: 5,
-        editModeSettings: const EditModeSettings(
-            resizeCursorSide: 15,
-            fillBackgroundAnimationDuration: Duration(milliseconds: 200),
-            foregroundStyle: EditModeForegroundStyle(
-                fillColor: Colors.black12,
-                sideWidth: 1,
-                innerRadius: 8,
-                outherRadius: 8,
-                shadowColor: Colors.transparent,
-                shadowTransparentOccluder: true),
-            backgroundStyle: EditModeBackgroundStyle(
-                lineColor: Colors.black38,
-                lineWidth: 0.5,
-                doubleLineHorizontal: true,
-                doubleLineVertical: true)),
-        itemBuilder: (DashboardItem item, ItemCurrentLayout layout) {
-          return InkWell(
-            onTap: () {},
-            child: Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                  color: _colors[item.identifier] ?? getRandomColor(),
-                  borderRadius: BorderRadius.circular(10)),
-              child: SizedBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: Text(
-                      "ID: ${item.identifier} , Layout: ${layout.origin}")),
-            ),
-          );
-        },
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+              onPressed: () {
+                itemController.clear();
+              },
+              icon: const Icon(Icons.delete)),
+          IconButton(
+              onPressed: () {
+                add(context);
+              },
+              icon: const Icon(Icons.add)),
+          IconButton(
+              onPressed: () {
+                itemController.setEditMode(!itemController.isEditing);
+                setState(() {});
+              },
+              icon: const Icon(Icons.edit)),
+          // IconButton(
+          //     onPressed: () {
+          //       configuration(context);
+          //     },
+          //     icon: const Icon(Icons.settings))
+        ],
+      ),
+      body: SafeArea(
+        child: Dashboard<ColoredDashboardItem>(
+          shrinkToPlace: true,
+          slideToTop: true,
+          absorbPointer: false,
+          padding: const EdgeInsets.all(1),
+          horizontalSpace: 8,
+          verticalSpace: 8,
+          slotAspectRatio: 1.7,
+          dashboardItemController: itemController,
+          slotCount:
+              4 /*(MediaQuery.of(context).size.width ~/ 100).clamp(2, 20)*/,
+          errorPlaceholder: (e, s) {
+            return Text("$e , $s");
+          },
+          physics: const ClampingScrollPhysics(),
+          editModeSettings: const EditModeSettings(
+              paintItemForeground: false,
+              resizeCursorSide: 15,
+              fillBackgroundAnimationDuration: Duration(milliseconds: 200),
+              foregroundStyle: EditModeForegroundStyle(
+                  fillColor: Colors.black12,
+                  sideWidth: 15,
+                  innerRadius: 8,
+                  outherRadius: 8,
+                  shadowColor: Colors.black12,
+                  shadowTransparentOccluder: true),
+              backgroundStyle: EditModeBackgroundStyle(
+                  lineColor: Colors.black38,
+                  lineWidth: 0.5,
+                  doubleLineHorizontal: true,
+                  doubleLineVertical: true)),
+          itemBuilder: (ColoredDashboardItem item) {
+            var layout = item.layoutData;
+            return Stack(
+              children: [
+                Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: item.color,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: SizedBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: Text("ID: ${item.identifier}\n${[
+                        "x: ${layout.startX}",
+                        "y: ${layout.startY}",
+                        "w: ${layout.width}",
+                        "h: ${layout.height}",
+                        if (layout.minWidth != 1) "minW: ${layout.minWidth}",
+                        if (layout.minHeight != 1) "minH: ${layout.minHeight}",
+                        if (layout.maxWidth != null) "maxW: ${layout.maxWidth}",
+                        if (layout.maxHeight != null)
+                          "maxH : ${layout.maxHeight}"
+                      ].join("\n")}")),
+                ),
+                if (itemController.isEditing)
+                  Positioned(
+                      right: 5,
+                      top: 5,
+                      child: InkResponse(
+                          radius: 20,
+                          onTap: () {
+                            itemController.delete(item.identifier);
+                          },
+                          child: const Icon(
+                            Icons.clear,
+                            color: Colors.white,
+                            size: 20,
+                          )))
+              ],
+            );
+          },
+        ),
       ),
     );
+  }
+
+  // Future<void> configuration(BuildContext context) async {
+  //   var res = await showDialog(
+  //       context: context,
+  //       builder: (c) {
+  //         return const ConfigurationDialog();
+  //       });
+  //   if (res != null) {}
+  // }
+
+  Future<void> add(BuildContext context) async {
+    var res = await showDialog(
+        context: context,
+        builder: (c) {
+          return const AddDialog();
+        });
+
+    if (res != null) {
+      itemController.add(ColoredDashboardItem(
+          color: res[6],
+          width: res[0],
+          height: res[1],
+          identifier: Random().nextInt(100000).toString(),
+          minWidth: res[2],
+          minHeight: res[3],
+          maxWidth: res[4] == 0 ? null : res[4],
+          maxHeight: res[5] == 0 ? null : res[5]));
+    }
   }
 }

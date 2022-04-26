@@ -4,6 +4,7 @@ class EditModeBackgroundPainter extends CustomPainter {
   EditModeBackgroundPainter(
       {required this.offset,
       required this.slotEdge,
+          required this.verticalSlotEdge,
       required this.slotCount,
       required this.viewportDelegate,
       this.fillPosition,
@@ -15,7 +16,7 @@ class EditModeBackgroundPainter extends CustomPainter {
 
   double offset;
 
-  double slotEdge;
+  double slotEdge, verticalSlotEdge;
 
   int slotCount;
 
@@ -63,9 +64,9 @@ class EditModeBackgroundPainter extends CustomPainter {
       ..strokeWidth = style.lineWidth;
     var max = constraints.maxHeight;
     var i = 0;
-    var s = offset % slotEdge;
+    var s = offset % verticalSlotEdge;
     while (true) {
-      var y = (i * slotEdge) - s;
+      var y = (i * verticalSlotEdge) - s;
       if (y > max) {
         break;
       }
@@ -91,13 +92,6 @@ class EditModeBackgroundPainter extends CustomPainter {
     drawVerticalLines(canvas);
     drawHorizontals(canvas);
     if (fillPosition != null) {
-      // var pos = fillPosition!.currentPosition(
-      //     offset: offset,
-      //     viewportDelegate: viewportDelegate,
-      //     slotEdge: slotEdge);
-      // var rect = Rect.fromLTWH(pos.x - viewportDelegate.padding.left,
-      //     pos.y - viewportDelegate.padding.top, pos.width, pos.height);
-
       canvas.drawRect(fillPosition!, Paint()..color = style.fillColor);
     }
   }

@@ -1,14 +1,31 @@
 part of dashboard;
 
 ///
-typedef DashboardItemBuilder<T> = Widget Function(
-    DashboardItem<T> item, ItemCurrentLayout currentLayout);
+typedef DashboardItemBuilder<T extends DashboardItem> = Widget Function(T item);
 
+/// A list of widget arranged with hand or initially.
 ///
-class Dashboard<T> extends StatefulWidget {
+/// [Dashboard] is scrolling widget that contains items which can
+/// edited by size and place.
+///
+/// In general, it is used to allow the user to control the locations and
+/// dimensions of the views(e.g. task list, charts etc.) in applications
+/// that have many different views.
+///
+/// Dashboard divides the viewport to a certain number of slots
+/// on the horizontal and places the items according to these slots.
+///
+/// The slot width is determined by [slotCount] value.
+/// And slot height determined by [slotHeight] or [slotAspectRatio].
+/// In default slots are square.
+///
+/// [dashboardItemController] determines the layouts of widgets to be displayed
+/// in initial state.
+/// This controller is also used to add/delete widget and handle layout changes.
+class Dashboard<T extends DashboardItem> extends StatefulWidget {
+  /// A list of widget arranged with hand or initially.
   const Dashboard(
       {Key? key,
-      this.axis = Axis.vertical,
       required this.itemBuilder,
       required this.dashboardItemController,
       this.slotCount = 8,
@@ -17,82 +34,176 @@ class Dashboard<T> extends StatefulWidget {
       this.dragStartBehavior,
       this.scrollBehavior,
       this.cacheExtend = 500,
-      this.crossAxisSpace = 8,
-      this.mainAxisSpace = 8,
+      this.verticalSpace = 8,
+      this.horizontalSpace = 8,
       this.padding = const EdgeInsets.all(0),
       this.shrinkToPlace = true,
-      this.swapOnEditing = true,
       this.slideToTop = true,
+      this.slotAspectRatio,
+      this.slotHeight,
       this.editModeSettings = const EditModeSettings(),
-      this.textDirection = TextDirection.ltr})
-      : super(key: key);
+      this.textDirection = TextDirection.ltr,
+      this.errorPlaceholder,
+      this.loadingPlaceholder,
+      this.absorbPointer = true,
+      this.animateEverytime = true})
+      : assert((slotHeight == null && slotAspectRatio == null) ||
+            !(slotHeight != null && slotAspectRatio != null)),
+        super(key: key);
+
+  /// [slotAspectRatio] determines slots height. Slot width determined by
+  /// viewport width and [slotCount].
+  final double? slotAspectRatio;
+
+  /// [slotHeight] determines slots height by fixed length.
+  final double? slotHeight;
 
   ///
+  final bool animateEverytime;
+
+  ///
+  final bool absorbPointer;
+
+  /// Each existing [DashboardItem] in the [dashboardItemController] must
+  /// added to widget tree.
+  ///
+  /// [itemBuilder] callback takes a argument of [DashboardItem].
+  /// [DashboardItem.itemLayout] carries the latest [ItemLayout].
+  /// [itemBuilder] must return non-null Widget instance. The callback will be
+  /// called when widget created or item editing started (for only editing item)
+  /// or change item layout (for only changed items).
+  ///
+  /// [cacheExtend] determines when the widget will creating / removing in
+  /// the widget tree.
   final DashboardItemBuilder<T> itemBuilder;
 
-  ///
+  /// The viewport has an area before and after the visible area to cache items
+  /// that are about to become visible when the user scrolls.
+  /// Items that fall in this cache area are laid out even though they are
+  /// not (yet) visible on screen. The [cacheExtent] describes how many pixels
+  /// the cache area extends before the leading edge and after the trailing
+  /// edge of the viewport.
+  /// The total extent, which the viewport will try to cover with children,
+  /// is  [cacheExtent] before the leading edge + extent of the
+  /// main axis + [cacheExtent] after the trailing edge.
   final double cacheExtend;
 
+  /// When in Layout edit mode is true, some paintings/drawings are made on the
+  /// viewport background and items (widgets) foreground.
   ///
+  /// [editModeSettings] are used for settings related to the drawing, painting
+  /// and animations during editing.
+  ///
+  /// For more information about settings see [EditModeSettings].
   final EditModeSettings editModeSettings;
 
-  /// Dashboard scroll axis.
-  /// The dashboard widget should be constrained to the opposite [axis].
-  /// E.g if [axis] is vertical, the width of the dashboard should be bounded,
-  /// otherwise throws [Unbounded] exception.
+  /// If the [dashboardItemController] uses a [DashboardItemStorageDelegate],
+  /// the loading of the items initially is done with a FutureOr function.
   ///
-  final Axis axis;
+  /// If the function returns a Future, this loading may take a while.
+  /// In during loading, [Dashboard] shows [loadingPlaceholder].
+  ///
+  /// Default [loadingPlaceholder] is a centered circular process indicator.
+  final Widget? loadingPlaceholder;
 
+  /// If the [dashboardItemController] uses a [DashboardItemStorageDelegate],
+  /// the loading of the items initially is done with a FutureOr function.
   ///
+  /// If the function throws a exception [Dashboard] will call
+  /// [errorPlaceholder] and shows returned widget.
+  final Widget Function(Object error, StackTrace stackTrace)? errorPlaceholder;
+
+  /// [dashboardItemController] is dashboard items controller.
+  /// The controller determines initial [DashboardItem]s and add / delete
+  /// operations are done with this controller.
+  ///
+  /// Also storage operations are made with the [DashboardItemStorageDelegate]
+  /// of the controller (if non-null).
   final DashboardItemController<T> dashboardItemController;
 
-  ///
+  /// Vertical slot count.
   final int slotCount;
 
-  ///
+  /// [Scrollable] widget scrollController.
   final ScrollController? scrollController;
 
-  ///
+  /// [Scrollable] widget scrollPhysics.
   final ScrollPhysics? physics;
 
-  ///
+  /// [Scrollable] widget dragStartBehavior.
   final DragStartBehavior? dragStartBehavior;
 
-  ///
+  /// [Scrollable] widget scrollBehavior.
   final ScrollBehavior? scrollBehavior;
 
+  /// Horizontal gap between two items.
   ///
-  final double mainAxisSpace, crossAxisSpace;
+  /// If the items startX equal 0 or items endX equal slotCount the gap
+  /// is not placed. (Edges touching the edges of viewport excluding padding.)
+  final double horizontalSpace;
 
+  /// Vertical gap between two items.
   ///
+  /// If the items startY equal 0 or items endY is biggest Y in the Dashboard,
+  /// the gap is not placed. (Edges touching the edges of
+  /// viewport excluding padding.)
+  final double verticalSpace;
+
+  /// [padding] is the spacing between items and Dashboard outer edges.
   final EdgeInsetsGeometry padding;
 
+  /// When adding a new item, item dimensions editing or in the initial
+  /// re-arranging, items trying to place certain position. When the item not
+  /// fit to the position (e.g. conflict with another item), if [shrinkToPlace]
+  /// is true item dimensions trying to shrink, else Dashboard decide that item
+  /// not placed to the position.
   ///
+  /// Shrinking pays attention minWidth / minHeight.
   final bool shrinkToPlace;
 
+  /// Initially try slide items to top.
   ///
-  final bool swapOnEditing;
-
-  ///
+  /// If [slideToTop] is true, Initially empty slots at the top are tried
+  /// to be filled with items that starting from the top.
   final bool slideToTop;
 
+  /// [padding] resolved with [textDirection].
   final TextDirection textDirection;
 
   @override
   _DashboardState<T> createState() => _DashboardState<T>();
 }
 
-class _DashboardState<T> extends State<Dashboard<T>>
+class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
     with TickerProviderStateMixin {
   ///
   @override
   void initState() {
-    _layoutController = DashboardLayoutController();
+    _layoutController = DashboardLayoutController<T>();
     _layoutController.addListener(() {
       setState(() {});
     });
+
+    widget.dashboardItemController.attach(_layoutController);
+    if (_withDelegate) {
+      widget.dashboardItemController._loadItems(widget.slotCount);
+      widget.dashboardItemController._asyncSnap!.addListener(() {
+        if (mounted) {
+          if (!_building) {
+            setState(() {});
+          }
+        }
+      });
+    }
     super.initState();
   }
+
+  bool _building = true;
+
+  AsyncSnapshot? get _snap => widget.dashboardItemController._asyncSnap?.value;
+
+  bool get _withDelegate =>
+      widget.dashboardItemController.itemStorageDelegate != null;
 
   ///
   late DashboardLayoutController<T> _layoutController;
@@ -108,33 +219,62 @@ class _DashboardState<T> extends State<Dashboard<T>>
     /// check slot count
     /// check new constrains equal exists
 
+    _layoutController.absorbPointer = widget.absorbPointer;
     _layoutController._viewportDelegate = ViewportDelegate(
         constraints: constraints,
         padding: widget.padding.resolve(widget.textDirection),
-        mainAxisSpace: widget.mainAxisSpace,
-        crossAxisSpace: widget.crossAxisSpace);
+        mainAxisSpace: widget.horizontalSpace,
+        crossAxisSpace: widget.verticalSpace);
 
-    if (!_layoutController._isAttached) {
+    if (_layoutController._isAttached &&
+        (_layoutController.slotCount != widget.slotCount ||
+            _layoutController.slideToTop != widget.slideToTop ||
+            _layoutController.shrinkToPlace != widget.shrinkToPlace)) {
       _layoutController.attach(
+          animateEverytime: widget.animateEverytime,
           slideToTop: widget.slideToTop,
           shrinkToPlace: widget.shrinkToPlace,
-          axis: widget.axis,
+          axis: Axis.vertical,
           itemController: widget.dashboardItemController,
           slotCount: widget.slotCount);
     }
 
-    _layoutController
-        ._setSizes(_layoutController._viewportDelegate.resolvedConstrains);
+    if (!_layoutController._isAttached) {
+      _layoutController.attach(
+          animateEverytime: widget.animateEverytime,
+          slideToTop: widget.slideToTop,
+          shrinkToPlace: widget.shrinkToPlace,
+          axis: Axis.vertical,
+          itemController: widget.dashboardItemController,
+          slotCount: widget.slotCount);
+    }
+
+    double h;
+
+    if (widget.slotHeight != null) {
+      h = widget.slotHeight!;
+    } else if (widget.slotAspectRatio != null) {
+      h = _layoutController._viewportDelegate.resolvedConstrains.maxWidth /
+          widget.slotCount /
+          widget.slotAspectRatio!;
+    } else {
+      h = _layoutController._viewportDelegate.resolvedConstrains.maxWidth /
+          widget.slotCount;
+    }
+
+    _layoutController._viewportDelegate.resolvedConstrains;
+
+    _layoutController._setSizes(
+        _layoutController._viewportDelegate.resolvedConstrains, h);
     _offset = o;
-    _offset!.applyViewportDimension(widget.axis == Axis.vertical
-        ? _layoutController._viewportDelegate.constraints.maxHeight
-        : _layoutController._viewportDelegate.constraints.maxWidth);
+    _offset!.applyViewportDimension(
+        _layoutController._viewportDelegate.constraints.maxHeight);
 
-    var maxIndex = (_layoutController._endsTree.lastKey());
+    var maxIndex = (_layoutController._endsTree.lastKey() ?? 0);
 
-    var maxCoordinate = (_layoutController.getIndexCoordinate(maxIndex!));
+    var maxCoordinate = (_layoutController.getIndexCoordinate(maxIndex));
 
-    _maxExtend = ((maxCoordinate[1] + 1) * _layoutController.slotEdge);
+    _maxExtend = ((maxCoordinate[1] + 1) * _layoutController.verticalSlotEdge);
 
     _maxExtend -= constraints.maxHeight;
 
@@ -146,14 +286,30 @@ class _DashboardState<T> extends State<Dashboard<T>>
   late double _maxExtend;
 
   ///
-  final GlobalKey<_DashboardStackState> _stateKey = GlobalKey();
+  final GlobalKey<_DashboardStackState<T>> _stateKey =
+      GlobalKey<_DashboardStackState<T>>();
 
   bool scrollable = true;
 
   @override
   Widget build(BuildContext context) {
+    _building = true;
     return LayoutBuilder(builder: (context, constrains) {
-      Unbounded.check(widget.axis, constrains);
+      Unbounded.check(Axis.vertical, constrains);
+      if (_withDelegate) {
+        if (_snap!.connectionState == ConnectionState.waiting) {
+          _building = false;
+          return widget.loadingPlaceholder ??
+              const Center(
+                child: CircularProgressIndicator(),
+              );
+        } else if (_snap!.connectionState == ConnectionState.none) {
+          _building = false;
+          return widget.errorPlaceholder
+                  ?.call(_snap!.error!, _snap!.stackTrace!) ??
+              const SizedBox();
+        }
+      }
       return Scrollable(
           physics: scrollable
               ? widget.physics
@@ -168,6 +324,7 @@ class _DashboardState<T> extends State<Dashboard<T>>
             SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
               _stateKey.currentState?._listenOffset(o);
             });
+            _building = false;
             return _DashboardStack<T>(
                 onScrollStateChange: (st) {
                   setState(() {

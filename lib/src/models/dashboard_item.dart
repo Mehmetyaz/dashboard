@@ -3,7 +3,7 @@ part of dashboard;
 /// A dashboard consists of [DashboardItem]s.
 /// [DashboardItem] holds item identifier([identifier]) and [layoutData].
 ///
-class DashboardItem<T> {
+class DashboardItem {
   DashboardItem(
       {int startX = 0,
       int startY = 0,
@@ -13,8 +13,7 @@ class DashboardItem<T> {
       int minHeight = 1,
       int? maxHeight,
       int? maxWidth,
-      required this.identifier,
-      this.data})
+      required this.identifier})
       : layoutData = ItemLayout(
             startX: startX,
             startY: startY,
@@ -25,9 +24,18 @@ class DashboardItem<T> {
             minWidth: minWidth,
             minHeight: minHeight);
 
-  T? data;
+  DashboardItem.withLayout(this.identifier, this.layoutData);
+
+  factory DashboardItem.fromMap(Map<String, dynamic> map) {
+    return DashboardItem.withLayout(
+        map["item_id"], ItemLayout.fromMap(map["layout"]));
+  }
 
   ItemLayout layoutData;
 
   String identifier;
+
+  Map<String, dynamic> toMap() {
+    return {"item_id": identifier, "layout": layoutData.toMap()};
+  }
 }

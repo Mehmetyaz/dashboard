@@ -1,6 +1,6 @@
 part of dashboard;
 
-class _DashboardStack<T> extends StatefulWidget {
+class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
   const _DashboardStack(
       {Key? key,
       required this.editModeSettings,
@@ -23,10 +23,11 @@ class _DashboardStack<T> extends StatefulWidget {
   final DashboardItemBuilder<T> itemBuilder;
 
   @override
-  State<_DashboardStack> createState() => _DashboardStackState();
+  State<_DashboardStack<T>> createState() => _DashboardStackState<T>();
 }
 
-class _DashboardStackState extends State<_DashboardStack> {
+class _DashboardStackState<T extends DashboardItem>
+    extends State<_DashboardStack<T>> {
   ///
   ViewportOffset get viewportOffset => widget.offset;
 
@@ -42,6 +43,12 @@ class _DashboardStackState extends State<_DashboardStack> {
   ///
   double get height => viewportDelegate.resolvedConstrains.maxHeight;
 
+  @override
+  void didUpdateWidget(covariant _DashboardStack<T> old) {
+    _widgetsMap.clear();
+    super.didUpdateWidget(old);
+  }
+
   ///
   _listenOffset(ViewportOffset o) {
     o.removeListener(_listen);
@@ -52,12 +59,14 @@ class _DashboardStackState extends State<_DashboardStack> {
   @override
   void didChangeDependencies() {
     _listenOffset(viewportOffset);
+    _widgetsMap.clear();
     super.didChangeDependencies();
   }
 
   @override
   void initState() {
     _listenOffset(viewportOffset);
+    _widgetsMap.clear();
     super.initState();
   }
 
@@ -72,11 +81,12 @@ class _DashboardStackState extends State<_DashboardStack> {
   }
 
   Widget buildPositioned(List list) {
-    (list[0] as ItemCurrentLayout)._key = _keys[list[2]]!;
     return _DashboardItemWidget(
       key: _keys[list[2]]!,
       itemGlobalPosition: (list[0] as ItemCurrentLayout).currentPosition(
-          viewportDelegate: viewportDelegate, slotEdge: slotEdge),
+          viewportDelegate: viewportDelegate,
+          slotEdge: slotEdge,
+          verticalSlotEdge: verticalSlotEdge),
       itemCurrentLayout: list[0],
       id: list[2],
       editModeSettings: widget.editModeSettings,
@@ -87,19 +97,21 @@ class _DashboardStackState extends State<_DashboardStack> {
   }
 
   late double slotEdge;
-
+  late double verticalSlotEdge;
   final Map<String, List> _widgetsMap = <String, List>{};
 
   void addWidget(String id) {
     var i = widget.dashboardController.itemController._items[id];
-    var l = widget.dashboardController._layouts[i!.identifier]!;
+    var l = widget.dashboardController._layouts![i!.identifier]!;
+    i.layoutData = l.asLayout();
     _widgetsMap[id] = [
       l,
-      widget.itemBuilder(i, l),
+      widget.itemBuilder(i),
       id,
     ];
 
     _keys[id] ??= GlobalKey<_DashboardItemWidgetState>();
+    l._key = _keys[id]!;
   }
 
   final Map<String, GlobalKey<_DashboardItemWidgetState>> _keys = {};
@@ -107,13 +119,13 @@ class _DashboardStackState extends State<_DashboardStack> {
   @override
   Widget build(BuildContext context) {
     slotEdge = widget.dashboardController.slotEdge;
-
+    verticalSlotEdge = widget.dashboardController.verticalSlotEdge;
     var startPixels = (viewportOffset.pixels) - widget.cacheExtend;
-    var startY = (startPixels / slotEdge).floor();
+    var startY = (startPixels / verticalSlotEdge).floor();
     var startIndex = widget.dashboardController.getIndex([0, startY]);
 
     var endPixels = viewportOffset.pixels + height + widget.cacheExtend;
-    var endY = (endPixels / slotEdge).ceil();
+    var endY = (endPixels / verticalSlotEdge).ceil();
     var endIndex = widget.dashboardController
         .getIndex([widget.dashboardController.slotCount - 1, endY]);
 
@@ -185,7 +197,7 @@ class _DashboardStackState extends State<_DashboardStack> {
     Widget result = Stack(
       clipBehavior: Clip.hardEdge,
       children: [
-        if (widget.editModeSettings.editBackground &&
+        if (widget.editModeSettings.paintBackground &&
             widget.dashboardController.isEditing)
           Positioned(
             top: viewportDelegate.padding.top,
@@ -275,11 +287,17 @@ class _DashboardStackState extends State<_DashboardStack> {
   void scroll() {
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       if (speed != 0) {
-        viewportOffset.jumpTo(
-            (pixels + speed).clamp(0, widget.maxScrollOffset + (slotEdge * 2)));
+        viewportOffset.jumpTo((pixels + speed)
+            .clamp(0, widget.maxScrollOffset + (verticalSlotEdge * 2)));
         scroll();
       }
     });
+  }
+
+  @override
+  void reassemble() {
+    _widgetsMap.clear();
+    super.reassemble();
   }
 
   double speed = 0;
@@ -289,16 +307,19 @@ class _DashboardStackState extends State<_DashboardStack> {
         local.dy - viewportDelegate.padding.top);
 
     var x = (local.dx - viewportDelegate.padding.left) ~/ slotEdge;
-    var y = (local.dy + pixels - viewportDelegate.padding.top) ~/ slotEdge;
+    var y =
+        (local.dy + pixels - viewportDelegate.padding.top) ~/ verticalSlotEdge;
 
     var e = widget.dashboardController
         ._indexesTree[widget.dashboardController.getIndex([x, y])];
 
     if (e is String) {
       var directions = <AxisDirection>[];
-      _editing = widget.dashboardController._layouts[e]!;
+      _editing = widget.dashboardController._layouts![e]!;
       var _current = _editing!.currentPosition(
-          slotEdge: slotEdge, viewportDelegate: viewportDelegate);
+          slotEdge: slotEdge,
+          viewportDelegate: viewportDelegate,
+          verticalSlotEdge: verticalSlotEdge);
       var _itemGlobal = ItemCurrentPosition(
           x: _current.x - viewportDelegate.padding.left,
           y: _current.y - viewportDelegate.padding.top - pixels,
@@ -337,7 +358,7 @@ class _DashboardStackState extends State<_DashboardStack> {
       _startScrollPixels = pixels;
       widget.dashboardController.startEdit(e, _holdDirections == null);
 
-      var l = widget.dashboardController._layouts[e];
+      var l = widget.dashboardController._layouts![e];
       widget.dashboardController.editSession!.editing._originSize = [
         l!.width,
         l.height
@@ -369,10 +390,13 @@ class _DashboardStackState extends State<_DashboardStack> {
     if (_editing != null) {
       if (_editingResize) {
         var scrollDifference = pixels - _startScrollPixels!;
-
+        var difs = <String>{};
         var resizeMoveResult = _editing!._resizeMove(
             holdDirections: _holdDirections!,
             local: local,
+            onChange: (s) {
+              difs.add(s);
+            },
             start: _moveStartOffset!,
             scrollDifference: scrollDifference);
 
@@ -380,6 +404,10 @@ class _DashboardStackState extends State<_DashboardStack> {
           setState(() {
             _moveStartOffset =
                 _moveStartOffset! + resizeMoveResult.startDifference;
+            _widgetsMap.remove(_editing!.id);
+            for (var r in difs) {
+              _widgetsMap.remove(r);
+            }
           });
         }
       } else {
@@ -389,6 +417,7 @@ class _DashboardStackState extends State<_DashboardStack> {
           setState(() {
             _moveStartOffset =
                 _moveStartOffset! + resizeMoveResult.startDifference;
+            _widgetsMap.remove(_editing!.id);
           });
         }
       }
@@ -396,6 +425,7 @@ class _DashboardStackState extends State<_DashboardStack> {
   }
 
   void _onMoveEnd() {
+    _editing?._key = _keys[_editing!.id]!;
     _editing?._key.currentState
         ?._setLast(_editing!._transform.value, _editing!._resizePosition.value)
         .then((value) {

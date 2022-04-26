@@ -162,7 +162,9 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
     );
 
     if (onEditMode) {
-      result = AbsorbPointer(child: result);
+      if (widget.layoutController.absorbPointer) {
+        result = AbsorbPointer(child: result);
+      }
 
       if (kIsWeb) {
         result = MouseRegion(
@@ -174,7 +176,10 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
       }
     }
 
-    if (onEditMode && ex != null && !ex!.equal(widget.itemGlobalPosition)) {
+    if ((onEditMode || widget.layoutController.animateEverytime) &&
+        ex != null &&
+        !ex!.equal(widget.itemGlobalPosition)) {
+
       _animationController.reset();
       _animation =
           _ItemCurrentPositionTween(begin: ex!, end: widget.itemGlobalPosition)
@@ -186,7 +191,7 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
 
     ex = widget.itemGlobalPosition;
 
-    if (!onEditMode) {
+    if (!onEditMode && !widget.layoutController.animateEverytime) {
       var cp = widget.itemGlobalPosition;
       return Positioned(
           left: cp.x,
@@ -233,7 +238,8 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
             top: cp.y + o.dy - widget.offset,
             width: cp.width,
             height: cp.height,
-            child: widget.layoutController.isEditing
+            child: widget.layoutController.isEditing &&
+                    widget.editModeSettings.paintItemForeground
                 ? CustomPaint(
                     child: w!,
                     foregroundPainter: EditModeItemPainter(

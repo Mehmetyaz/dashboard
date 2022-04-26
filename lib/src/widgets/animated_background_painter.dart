@@ -45,7 +45,8 @@ class _AnimatedBackgroundPainterState extends State<AnimatedBackgroundPainter>
         widget.layoutController.editSession != null) {
       var pos = widget.layoutController.editSession?.editing.currentPosition(
           viewportDelegate: widget.layoutController._viewportDelegate,
-          slotEdge: widget.layoutController.slotEdge);
+          slotEdge: widget.layoutController.slotEdge,
+          verticalSlotEdge: widget.layoutController.verticalSlotEdge);
       var rect = Rect.fromLTWH(pos!.x - viewportDelegate.padding.left,
           pos.y - offset - viewportDelegate.padding.top, pos.width, pos.height);
 
@@ -75,13 +76,14 @@ class _AnimatedBackgroundPainterState extends State<AnimatedBackgroundPainter>
           builder: (context, child) {
             return CustomPaint(
               painter: EditModeBackgroundPainter(
+                  verticalSlotEdge: widget.layoutController.verticalSlotEdge,
                   fillPosition: _animation!.value,
                   slotCount: widget.layoutController.slotCount,
                   style: widget.editModeSettings.backgroundStyle,
                   slotEdge: widget.layoutController.slotEdge,
                   offset: widget.offset,
                   viewportDelegate: widget.layoutController._viewportDelegate),
-              isComplex: true,
+              isComplex: false,
             );
           });
     } else {
@@ -89,12 +91,13 @@ class _AnimatedBackgroundPainterState extends State<AnimatedBackgroundPainter>
       return CustomPaint(
         painter: EditModeBackgroundPainter(
             fillPosition: fillRect,
+            verticalSlotEdge: widget.layoutController.verticalSlotEdge,
             slotCount: widget.layoutController.slotCount,
             style: widget.editModeSettings.backgroundStyle,
             slotEdge: widget.layoutController.slotEdge,
             offset: widget.offset,
             viewportDelegate: widget.layoutController._viewportDelegate),
-        isComplex: true,
+        isComplex: false,
       );
     }
   }

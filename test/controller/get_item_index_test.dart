@@ -3,9 +3,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  var dbIC = DashboardItemController(items: []);
+  var dbIC = DashboardItemController<DashboardItem>(items: []);
   var dbC = DashboardLayoutController();
   dbC.attach(
+      animateEverytime: true,
       slideToTop: true,
       shrinkToPlace: true,
       axis: Axis.vertical,
@@ -42,13 +43,14 @@ void main() {
     var db = DashboardLayoutController();
 
     db.attach(
+        animateEverytime: true,
         slideToTop: true,
         shrinkToPlace: true,
         slotCount: 9,
         itemController: dbIC,
         axis: Axis.vertical);
 
-    var o = db.getOverflows(
+    var o = db.getOverflowsAlt(
         const ItemLayout(startX: 3, width: 4, startY: 1, height: 3));
 
     expect(o, [6, 3]);
@@ -74,13 +76,14 @@ void main() {
     var db = DashboardLayoutController();
 
     db.attach(
+        animateEverytime: true,
         slideToTop: true,
         shrinkToPlace: true,
         axis: Axis.vertical,
         itemController: dbIC,
         slotCount: 9);
 
-    var o = db.getOverflows(
+    var o = db.getOverflowsAlt(
         const ItemLayout(startX: 3, width: 4, startY: 1, height: 3));
 
     expect(o, [5, 3]);
