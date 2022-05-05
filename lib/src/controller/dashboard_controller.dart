@@ -1,151 +1,229 @@
 part of dashboard;
 
+/// A controller for dashboard items.
+///
+/// Every [Dashboard] needs a [DashboardItemController].
+/// The controller determines which items will be displayed on the screen.
+/// Item addition, removal, etc. operations are done through the controller.
+///
+/// The controller is also used to enable/disable editing with [isEditing].
+/// Use as setter to specify edit mode.
+///
+/// [itemStorageDelegate] is used to handle changes and save the layout.
+/// You can save layout information on remote server or disk.
+///
+/// New items can be added with [add] or plural [addAll].
+///
+/// Items can be deleted with [delete] or plural [deleteAll].
+/// For deleting all items can be used [clear].
+///
 class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
-  DashboardItemController({required List<T> items})
-      : _items = items.asMap().map(
+  /// You can define items with constructor.
+  /// But the layout information is only for the session.
+  /// Changes cannot be handled.
+  DashboardItemController({
+    required List<T> items,
+  })  : _items = items.asMap().map(
               (key, value) => MapEntry(value.identifier, value),
-            );
+            ),
+        itemStorageDelegate = null;
 
+  /// You can create [DashboardItemController] with an [itemStorageDelegate].
+  /// In init state, item information is brought with the delegate.
+  /// The necessary functions of the delegate are triggered on all changes.
+  ///
+  /// If the delegate is waiting for a Future to load the items, this will throw
+  /// error at the end of the [timout].
   DashboardItemController.withDelegate(
       {Duration? timeout, required this.itemStorageDelegate})
       : _timeout = timeout ?? const Duration(seconds: 10);
 
-  DashboardItemStorageDelegate<T>? itemStorageDelegate;
+  /// To define [itemStorageDelegate] use [DashboardItemController.withDelegate]
+  ///
+  /// For more see [DashboardItemStorageDelegate] documentation.
+  final DashboardItemStorageDelegate<T>? itemStorageDelegate;
 
+  /// Users can only edit the layout when [isEditing] is true.
+  /// The [isEditing] does not have to be true to add or delete items.
+  ///
+  /// Use as setter to change [isEditing] value.
   bool get isEditing => _layoutController!.isEditing;
 
-  Duration? _timeout;
+  /// Change editing status.
+  set isEditing(bool value) {
+    _layoutController!.isEditing = value;
+  }
 
-  void addAll(List<T> items, {bool exactCoordinate = false}) {
-    if (isAttached) {
+  /// Add new item to Dashboard.
+  ///
+  /// If [itemStorageDelegate] is not null,
+  /// [DashboardItemStorageDelegate.onItemsAdded] will call with added item and
+  /// its new layout.
+  /// It is placed wherever possible. The new layoutData may not be the
+  /// same as the one added.
+  ///
+  /// If the location of the added item is defined, it is tried to be
+  /// placed in the location first. If there is a conflict or overflow and
+  /// [Dashboard.shrinkToPlace] is true, it is tried to be placed by shrinking.
+  /// In this case, if there is more than one possibility, it is placed in
+  /// the largest form.
+  void add(T item) {
+    if (_isAttached) {
+      _items[item.identifier] = item;
+      _layoutController!.add(item);
+      itemStorageDelegate?._onItemsAdded(
+          [_getItemWithLayout(item.identifier)], _layoutController!.slotCount);
+    } else {
+      throw Exception("Not Attached");
+    }
+  }
+
+  /// Add new multiple items to Dashboard.
+  ///
+  /// If [itemStorageDelegate] is not null,
+  /// [DashboardItemStorageDelegate.onItemsAdded] will call with added items and
+  /// their new layouts.
+  /// They are placed wherever possible. The new layoutData may not be the
+  /// same as the one added.
+  ///
+  /// If the location of the added item is defined, it is tried to be
+  /// placed in the location first. If there is a conflict or overflow and
+  /// [Dashboard.shrinkToPlace] is true, it is tried to be placed by shrinking.
+  /// In this case, if there is more than one possibility, it is placed in
+  /// the largest form.
+  void addAll(List<T> items) {
+    if (_isAttached) {
       _items.addAll(
           items.asMap().map((key, value) => MapEntry(value.identifier, value)));
       _layoutController!.addAll(items);
-      itemStorageDelegate?.onItemsAdded(
-          items.map((e) => getItemWithLayout(e.identifier)).toList());
+      itemStorageDelegate?._onItemsAdded(
+          items.map((e) => _getItemWithLayout(e.identifier)).toList(),
+          _layoutController!.slotCount);
     } else {
       throw Exception("Not Attached");
     }
     throw 0;
   }
 
-  Future<void> _loadItems(int slotCount) async {
-    var ftr = itemStorageDelegate!.getAllItems(slotCount);
-
-    if (ftr is Future<List<T>>) {
-      if (_asyncSnap == null) {
-        _asyncSnap = ValueNotifier(const AsyncSnapshot.waiting());
-      } else {
-        _asyncSnap!.value = const AsyncSnapshot.waiting();
-      }
-
-      ftr.then((value) {
-        _asyncSnap!.value = AsyncSnapshot.withData(ConnectionState.done, value);
-        _items = value
-            .asMap()
-            .map((key, value) => MapEntry(value.identifier, value));
-        notifyListeners();
-      }).timeout(_timeout!, onTimeout: () {
-        _asyncSnap!.value = AsyncSnapshot.withError(
-            ConnectionState.none, TimeoutException(null), StackTrace.current);
-        notifyListeners();
-      }).onError((error, stackTrace) {
-        _asyncSnap!.value = AsyncSnapshot.withError(
-            ConnectionState.none, error ?? Exception(), stackTrace);
-        notifyListeners();
-      });
-    } else {
-      _items =
-          ftr.asMap().map((key, value) => MapEntry(value.identifier, value));
-      if (_asyncSnap == null) {
-        _asyncSnap =
-            ValueNotifier(AsyncSnapshot.withData(ConnectionState.done, ftr));
-      } else {
-        _asyncSnap!.value = AsyncSnapshot.withData(ConnectionState.done, ftr);
-      }
-      notifyListeners();
-    }
-  }
-
-  ValueNotifier<AsyncSnapshot>? _asyncSnap;
-
-  T getItemWithLayout(String id) {
-    if (!isAttached) throw Exception("Not Attached");
-    return _items[id]!;
-  }
-
+  /// Delete an item from Dashboard.
   void delete(String id) {
-    if (isAttached) {
+    if (_isAttached) {
+      itemStorageDelegate?._onItemsDeleted(
+          [_getItemWithLayout(id)], _layoutController!.slotCount);
       _layoutController!.delete(id);
-      itemStorageDelegate?.onItemsDeleted([getItemWithLayout(id)]);
       _items.remove(id);
     } else {
       throw Exception("Not Attached");
     }
   }
 
+  /// Delete multiple items from Dashboard.
   void deleteAll(List<String> ids) {
-    if (isAttached) {
+    if (_isAttached) {
       _layoutController!.deleteAll(ids);
-      itemStorageDelegate
-          ?.onItemsDeleted(ids.map((e) => getItemWithLayout(e)).toList());
+      itemStorageDelegate?._onItemsDeleted(
+          ids.map((e) => _getItemWithLayout(e)).toList(),
+          _layoutController!.slotCount);
       _items.removeWhere((k, v) => ids.contains(k));
     } else {
       throw Exception("Not Attached");
     }
   }
 
-  void add(T item, {bool exactCoordinate = false}) {
-    if (isAttached) {
-      _items[item.identifier] = item;
-      _layoutController!.add(item);
-      itemStorageDelegate?.onItemsAdded([item]);
-    } else {
-      throw Exception("Not Attached");
-    }
+  /// Clear all items from Dashboard.
+  void clear() {
+    return deleteAll(items);
+  }
+
+  T _getItemWithLayout(String id) {
+    if (!_isAttached) throw Exception("Not Attached");
+    return _items[id]!..layoutData = _layoutController!._layouts![id]!.origin;
   }
 
   ///
   late Map<String, T> _items;
 
+  /// Get all items.
+  ///
+  /// The returned list is unmodifiable. A change negative affects
+  /// state management and causes conflicts.
   List<String> get items =>
       List.unmodifiable(_items.values.map((e) => e.identifier));
 
-  bool get isAttached => _layoutController != null;
+  Duration? _timeout;
 
-  DashboardLayoutController? _layoutController;
+  FutureOr<void> _loadItems(int slotCount) {
+    var ftr = itemStorageDelegate!._getAllItems(slotCount);
+    if (ftr is Future<List<T>>) {
+      if (_asyncSnap == null) {
+        _asyncSnap = ValueNotifier(const AsyncSnapshot.waiting());
+      } else {
+        _asyncSnap!.value = const AsyncSnapshot.waiting();
+      }
+      var completer = Completer();
 
-  void attach(DashboardLayoutController layoutController) {
+      ftr.then((value) {
+        _items = value
+            .asMap()
+            .map((key, value) => MapEntry(value.identifier, value));
+
+        completer.complete();
+        _asyncSnap!.value = AsyncSnapshot.withData(ConnectionState.done, value);
+      }).timeout(_timeout!, onTimeout: () {
+        completer.complete();
+        _asyncSnap!.value = AsyncSnapshot.withError(
+            ConnectionState.none, TimeoutException(null), StackTrace.current);
+      }).onError((error, stackTrace) {
+        completer.complete();
+        _asyncSnap!.value = AsyncSnapshot.withError(
+            ConnectionState.none, error ?? Exception(), stackTrace);
+      });
+
+      return Future.sync(() => completer.future);
+    } else {
+      _items =
+          ftr.asMap().map((key, value) => MapEntry(value.identifier, value));
+
+      if (_asyncSnap == null) {
+        _asyncSnap =
+            ValueNotifier(AsyncSnapshot.withData(ConnectionState.done, ftr));
+      } else {
+        _asyncSnap!.value = AsyncSnapshot.withData(ConnectionState.done, ftr);
+      }
+      return null;
+    }
+  }
+
+  ValueNotifier<AsyncSnapshot>? _asyncSnap;
+
+  bool get _isAttached => _layoutController != null;
+
+  _DashboardLayoutController? _layoutController;
+
+  void _attach(_DashboardLayoutController layoutController) {
     _layoutController = layoutController;
   }
 
-  void setEditMode(bool value) {
-    _layoutController!.isEditing = value;
-  }
+// bool trySlideToTop(String id) {
+//   return _layoutController!.mountToTop(id);
+// }
+//
+// void slideToTopAll() {
+//   return _layoutController!._slideToTopAll();
+// }
 
-  bool trySlideToTop(String id) {
-    return _layoutController!.mountToTop(id);
-  }
-
-  void slideToTopAll() {
-    return _layoutController!._slideToTopAll();
-  }
-
-  void clear() {
-    return deleteAll(items);
-  }
 }
 
 ///
-class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
+class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   ///
-  DashboardLayoutController();
+  _DashboardLayoutController();
 
   ///
   late DashboardItemController<T> itemController;
 
   ///
-  late ViewportDelegate _viewportDelegate;
+  late _ViewportDelegate _viewportDelegate;
 
   ///
   late int slotCount;
@@ -181,17 +259,17 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   late double slotEdge, verticalSlotEdge;
 
   ///
-  Map<String, ItemCurrentLayout>? _layouts;
+  Map<String, _ItemCurrentLayout>? _layouts;
 
   final SplayTreeMap<int, String> _startsTree = SplayTreeMap<int, String>();
   final SplayTreeMap<int, String> _endsTree = SplayTreeMap<int, String>();
 
   final SplayTreeMap<int, String> _indexesTree = SplayTreeMap<int, String>();
 
-  EditSession? editSession;
+  _EditSession? editSession;
 
   void startEdit(String id, bool transform) {
-    editSession = EditSession(
+    editSession = _EditSession(
         layoutController: this, editing: _layouts![id]!, transform: transform);
   }
 
@@ -199,9 +277,16 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
     if (editSession == null) return;
 
     if (editSession!._changes.isNotEmpty) {
-      itemController.itemStorageDelegate?.onItemsUpdated(editSession!._changes
-          .map((e) => itemController.getItemWithLayout(e))
-          .toList());
+      itemController.itemStorageDelegate?._onItemsUpdated(
+          editSession!._changes
+              .map(
+                (e) => itemController._getItemWithLayout(e),
+              )
+              .toList(),
+          slotCount);
+      for (var i in editSession!._changes) {
+        _layouts![i]!._clearListeners();
+      }
     }
 
     if (editSession!.isEqual) {
@@ -257,14 +342,14 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   }
 
   void add(DashboardItem item) {
-    _layouts![item.identifier] = ItemCurrentLayout(item.layoutData);
+    _layouts![item.identifier] = _ItemCurrentLayout(item.layoutData);
     mountToTop(item.identifier);
     notifyListeners();
   }
 
   void addAll(List<DashboardItem> items) {
     for (var item in items) {
-      _layouts![item.identifier] = ItemCurrentLayout(item.layoutData);
+      _layouts![item.identifier] = _ItemCurrentLayout(item.layoutData);
       mountToTop(item.identifier);
     }
     notifyListeners();
@@ -276,7 +361,7 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   }
 
   List<int?> getOverflowsAlt(ItemLayout itemLayout) {
-    var possibilities = <OverflowPossibility>[];
+    var possibilities = <_OverflowPossibility>[];
 
     var y = itemLayout.startY;
     var eY = itemLayout.startY + itemLayout.height;
@@ -290,7 +375,7 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
       xLoop:
       while (x < eX) {
         if (x > minX) {
-          possibilities.add(OverflowPossibility(
+          possibilities.add(_OverflowPossibility(
               x, y + 1, x - itemLayout.startX, y - itemLayout.startY + 1));
           break xLoop;
         }
@@ -323,14 +408,14 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
           }
 
           if (possibilities.isEmpty) {
-            possibilities.add(OverflowPossibility(
+            possibilities.add(_OverflowPossibility(
                 itemLayout.startX + itemLayout.width,
                 y,
                 itemLayout.width,
                 y - itemLayout.startY));
           }
 
-          possibilities.add(OverflowPossibility(
+          possibilities.add(_OverflowPossibility(
               x, y + 1, x - itemLayout.startX, y - itemLayout.startY + 1));
 
           y++;
@@ -473,18 +558,23 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
 
   void _indexItem(ItemLayout itemLayout, String id) {
     var i = getItemIndexes(itemLayout);
+    if (i.isEmpty) throw Exception("BURADA SIKINTI VAR: $id : $itemLayout");
     _startsTree[i.first] = id;
     _endsTree[i.last] = id;
     for (var index in i) {
       _indexesTree[index] = id;
     }
 
-    _layouts![id]!.origin = itemLayout;
+    _layouts![id]!.origin = itemLayout.._haveLocation = true;
     _layouts![id]!._mount(this, id);
   }
 
+  bool? shrinkOnMove;
+
   ///
   ItemLayout? tryMount(int value, ItemLayout itemLayout) {
+    var _shrinkToPlace = shrinkOnMove ?? shrinkToPlace;
+
     var r = getIndexCoordinate(value);
     var n = itemLayout.copyWithStarts(startX: r[0], startY: r[1]);
     var i = 0;
@@ -493,7 +583,14 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
         throw Exception("loop");
       }
       i++;
-      if (shrinkToPlace && n.startX + n.width > slotCount) {
+
+      var exOut = n.startX + n.width > slotCount;
+
+      if (exOut && !_shrinkToPlace) {
+        return null;
+      }
+
+      if (_shrinkToPlace && exOut) {
         // Not fit to viewport
         if (n.minWidth < n.width) {
           n = n.copyWithDimension(width: n.width - 1);
@@ -508,7 +605,7 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
           // both null
           return n;
         } else {
-          if (shrinkToPlace) {
+          if (_shrinkToPlace) {
             var eX = overflows[0] ?? (n.startX + n.width);
             var eY = overflows[1] ?? (n.startY + n.height);
 
@@ -575,7 +672,8 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
       var not = <String>[];
 
       layouts:
-      for (var i in _layouts!.entries) {
+      for (var i in _layouts!.entries
+          .where((element) => element.value._haveLocation)) {
         if (_axis == Axis.vertical && i.value.width > slotCount) {
           // Check fit, if necessary and possible, edit
           if (i.value.minWidth > slotCount) {
@@ -598,6 +696,33 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
 
         _indexItem(mount, i.key);
       }
+
+      layouts:
+      for (var i in _layouts!.entries
+          .where((element) => !element.value._haveLocation)) {
+        if (_axis == Axis.vertical && i.value.width > slotCount) {
+          // Check fit, if necessary and possible, edit
+          if (i.value.minWidth > slotCount) {
+            throw Exception("Minimum width > slotCount");
+          } else {
+            if (!shrinkToPlace) {
+              throw Exception("width not fit");
+            }
+          }
+        }
+
+        // can mount given start index
+        var mount = tryMount(
+            getIndex([i.value.startX, i.value.startY]), i.value.origin);
+
+        if (mount == null) {
+          not.add(i.key);
+          continue layouts;
+        }
+
+        _indexItem(mount, i.key);
+      }
+
       List<String> changes = [];
 
       if (slideToTop) {
@@ -612,8 +737,9 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
       changes.addAll(not);
 
       if (changes.isNotEmpty) {
-        itemController.itemStorageDelegate?.onItemsUpdated(
-            changes.map((e) => itemController.getItemWithLayout(e)).toList());
+        itemController.itemStorageDelegate?._onItemsUpdated(
+            changes.map((e) => itemController._getItemWithLayout(e)).toList(),
+            slotCount);
       }
     } on Exception {
       rethrow;
@@ -674,14 +800,15 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   late bool animateEverytime;
 
   ///
-  void attach({
-    required Axis axis,
-    required DashboardItemController<T> itemController,
-    required int slotCount,
-    required bool slideToTop,
-    required bool shrinkToPlace,
-    required bool animateEverytime,
-  }) {
+  void attach(
+      {required Axis axis,
+      required DashboardItemController<T> itemController,
+      required int slotCount,
+      required bool slideToTop,
+      required bool shrinkToPlace,
+      required bool animateEverytime,
+      required bool? shrinkOnMove}) {
+    this.shrinkOnMove = shrinkOnMove;
     this.itemController = itemController;
     this.slideToTop = slideToTop;
     this.shrinkToPlace = shrinkToPlace;
@@ -689,22 +816,26 @@ class DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
     this.animateEverytime = animateEverytime;
     _axis = axis;
     _isAttached = true;
-    _layouts ??= itemController._items.map((key, value) =>
-        MapEntry(value.identifier, ItemCurrentLayout(value.layoutData)));
+
+    _layouts = itemController._items.map((key, value) =>
+        MapEntry(value.identifier, _ItemCurrentLayout(value.layoutData)));
     mountItems();
+    _rebuild = true;
   }
+
+  bool _rebuild = false;
 
   ///
   bool _isAttached = false;
 }
 
-class OverflowPossibility extends Comparable<OverflowPossibility> {
-  OverflowPossibility(this.x, this.y, this.w, this.h) : sq = w * h;
+class _OverflowPossibility extends Comparable<_OverflowPossibility> {
+  _OverflowPossibility(this.x, this.y, this.w, this.h) : sq = w * h;
 
   int x, y, w, h, sq;
 
   @override
-  int compareTo(OverflowPossibility other) {
+  int compareTo(_OverflowPossibility other) {
     return sq.compareTo(other.sq);
   }
 
@@ -715,10 +846,10 @@ class OverflowPossibility extends Comparable<OverflowPossibility> {
 }
 
 ///
-class EditSession {
+class _EditSession {
   ///
-  EditSession(
-      {required DashboardLayoutController layoutController,
+  _EditSession(
+      {required _DashboardLayoutController layoutController,
       required this.editing,
       required this.transform})
       : editingOrigin = editing.copy();
@@ -757,7 +888,7 @@ class EditSession {
   final Map<AxisDirection, Map<String, List<_Change>>> _indirectChanges = {};
 
   void _addResize(
-      Resize resize, void Function(String id, _Change) onBackChange) {
+      _Resize resize, void Function(String id, _Change) onBackChange) {
     // _resizes[resize.resize.direction] ??= [];
     // _resizes[resize.resize.direction]!.add(resize.resize);
     if (resize.resize.increment && resize.indirectResizes != null) {
@@ -798,10 +929,10 @@ class EditSession {
   }
 
   ///
-  final ItemCurrentLayout editing;
+  final _ItemCurrentLayout editing;
 
   ///
-  final ItemCurrentLayout editingOrigin;
+  final _ItemCurrentLayout editingOrigin;
 }
 
 ///

@@ -1,23 +1,51 @@
 part of dashboard;
 
+/// Edit mode settings.
+/// It contains parameters related to gesture, animations, resizing.
 class EditModeSettings {
-  const EditModeSettings({
+  /// duration default is package:flutter/foundation.dart
+  /// [kThemeAnimationDuration]
+  EditModeSettings({
     this.resizeCursorSide = 10,
-    this.paintBackground = true,
+    this.paintBackgroundLines = true,
     this.fillEditingBackground = true,
+    this.longPressEnabled = true,
+    this.panEnabled = true,
     this.backgroundStyle = const EditModeBackgroundStyle(),
-    this.foregroundStyle = const EditModeForegroundStyle(),
-    this.fillBackgroundAnimationCurve = Curves.easeInOut,
-    this.fillBackgroundAnimationDuration = const Duration(milliseconds: 200),
-    this.paintItemForeground = true,
-  });
+    //this.foregroundStyle = const EditModeForegroundStyle(),
+    this.curve = Curves.easeInOut,
+    Duration? duration,
+    //this.paintItemForeground = true,
+    this.shrinkOnMove = true,
+  }) : duration = duration ?? kThemeAnimationDuration;
 
-  final Duration fillBackgroundAnimationDuration;
-  final Curve fillBackgroundAnimationCurve;
+  /// Animation duration
+  final Duration duration;
+
+  /// Start resize or move with long press.
+  final bool longPressEnabled;
+
+  /// Start resize or move with pan.
+  final bool panEnabled;
+
+  /// Animation curve
+  final Curve curve;
+
+  /// Shrink items on moving if necessary.
+  final bool shrinkOnMove;
+
+  /// Resize side width. If pan/longPress start in side editing is resizing.
   final double resizeCursorSide;
-  final bool paintBackground;
+
+  /// Paint background lines.
+  final bool paintBackgroundLines;
+
+  /// Fill editing item background.
   final bool fillEditingBackground;
-  final bool paintItemForeground;
+
+  ///final bool paintItemForeground = false;
+
+  /// Background style
   final EditModeBackgroundStyle backgroundStyle;
-  final EditModeForegroundStyle foregroundStyle;
+  //final EditModeForegroundStyle foregroundStyle;
 }

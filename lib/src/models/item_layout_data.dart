@@ -1,9 +1,9 @@
 part of dashboard;
 
 class ItemLayout {
-  const ItemLayout(
-      {required this.startX,
-      required this.startY,
+  ItemLayout(
+      {int? startX,
+      int? startY,
       required this.width,
       required this.height,
       this.minWidth = 1,
@@ -11,6 +11,25 @@ class ItemLayout {
       this.maxHeight,
       this.maxWidth})
       : assert(minWidth <= width),
+        assert(minHeight <= height),
+        assert(maxHeight == null || maxHeight >= height),
+        assert(maxWidth == null || maxWidth >= width),
+        _haveLocation = startX != null || startY != null,
+        startX = startX ?? 0,
+        startY = startY ?? 0;
+
+  ItemLayout._(
+      {required this.startX,
+      required this.startY,
+      required this.width,
+      required this.height,
+      this.minWidth = 1,
+      this.minHeight = 1,
+      this.maxHeight,
+      this.maxWidth,
+      required bool haveLocation})
+      : _haveLocation = haveLocation,
+        assert(minWidth <= width),
         assert(minHeight <= height),
         assert(maxHeight == null || maxHeight >= height),
         assert(maxWidth == null || maxWidth >= width);
@@ -29,8 +48,8 @@ class ItemLayout {
 
   Map<String, dynamic> toMap() {
     return {
-      "s_X": startX,
-      "s_Y": startY,
+      if (_haveLocation) "s_X": startX,
+      if (_haveLocation) "s_Y": startY,
       "w": width,
       "h": height,
       "min_W": minWidth,
@@ -45,6 +64,8 @@ class ItemLayout {
     return "startX: $startX , startY: $startY , width: $width , height: $height";
   }
 
+  bool _haveLocation;
+
   ///
   final int startX, startY;
 
@@ -57,7 +78,7 @@ class ItemLayout {
   final int? maxWidth, maxHeight;
 
   ItemLayout copyWithDimension({int? width, int? height}) {
-    return ItemLayout(
+    return ItemLayout._(
         startX: startX,
         startY: startY,
         width: width ?? this.width,
@@ -65,13 +86,14 @@ class ItemLayout {
         minHeight: minHeight,
         maxHeight: maxHeight,
         maxWidth: maxWidth,
-        minWidth: minWidth);
+        minWidth: minWidth,
+        haveLocation: _haveLocation);
   }
 
   ItemLayout copyWithStarts({int? startX, int? startY}) {
     var x = startX ?? this.startX;
     var y = startY ?? this.startY;
-    return ItemLayout(
+    return ItemLayout._(
         startX: x,
         startY: y,
         width: width,
@@ -79,6 +101,7 @@ class ItemLayout {
         minHeight: minHeight,
         maxHeight: maxHeight,
         maxWidth: maxWidth,
-        minWidth: minWidth);
+        minWidth: minWidth,
+        haveLocation: _haveLocation);
   }
 }

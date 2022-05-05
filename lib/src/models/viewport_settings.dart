@@ -1,8 +1,8 @@
 part of dashboard;
 
 @immutable
-class ViewportDelegate {
-  ViewportDelegate(
+class _ViewportDelegate {
+  _ViewportDelegate(
       {required this.constraints,
       required this.mainAxisSpace,
       required this.padding,
@@ -14,7 +14,7 @@ class ViewportDelegate {
 
   @override
   bool operator ==(Object other) {
-    return other is ViewportDelegate &&
+    return other is _ViewportDelegate &&
         constraints == other.constraints &&
         mainAxisSpace == other.mainAxisSpace &&
         padding == other.padding &&

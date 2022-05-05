@@ -24,7 +24,7 @@ typedef DashboardItemBuilder<T extends DashboardItem> = Widget Function(T item);
 /// This controller is also used to add/delete widget and handle layout changes.
 class Dashboard<T extends DashboardItem> extends StatefulWidget {
   /// A list of widget arranged with hand or initially.
-  const Dashboard(
+  Dashboard(
       {Key? key,
       required this.itemBuilder,
       required this.dashboardItemController,
@@ -41,14 +41,16 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
       this.slideToTop = true,
       this.slotAspectRatio,
       this.slotHeight,
-      this.editModeSettings = const EditModeSettings(),
+      EditModeSettings? editModeSettings,
       this.textDirection = TextDirection.ltr,
       this.errorPlaceholder,
       this.loadingPlaceholder,
       this.absorbPointer = true,
-      this.animateEverytime = true})
+      this.animateEverytime = true,
+      this.itemStyle = const ItemStyle()})
       : assert((slotHeight == null && slotAspectRatio == null) ||
             !(slotHeight != null && slotAspectRatio != null)),
+        editModeSettings = editModeSettings ?? EditModeSettings(),
         super(key: key);
 
   /// [slotAspectRatio] determines slots height. Slot width determined by
@@ -58,10 +60,15 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   /// [slotHeight] determines slots height by fixed length.
   final double? slotHeight;
 
+  /// In edit mode, item position changes due to resizing/moving are animated.
   ///
+  /// Also, changes due to slotCount changes are animated in edit mode.
+  ///
+  /// If [animateEverytime] item positions change with animation on
+  /// slotCount changes. Else the changes are not animated.
   final bool animateEverytime;
 
-  ///
+  /// Absorb item gestures on edit mode.
   final bool absorbPointer;
 
   /// Each existing [DashboardItem] in the [dashboardItemController] must
@@ -170,6 +177,12 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   /// [padding] resolved with [textDirection].
   final TextDirection textDirection;
 
+  /// Each item is wrapped by a [Material]. Material's parameters can be
+  /// specified with [itemStyle].
+  ///
+  /// Look [Material] documentation for more.
+  final ItemStyle itemStyle;
+
   @override
   _DashboardState<T> createState() => _DashboardState<T>();
 }
@@ -179,13 +192,15 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
   ///
   @override
   void initState() {
-    _layoutController = DashboardLayoutController<T>();
+    _layoutController = _DashboardLayoutController<T>();
     _layoutController.addListener(() {
       setState(() {});
     });
 
-    widget.dashboardItemController.attach(_layoutController);
+    widget.dashboardItemController._attach(_layoutController);
     if (_withDelegate) {
+      // widget.dashboardItemController._asyncSnap =
+      //     ValueNotifier(const AsyncSnapshot.waiting());
       widget.dashboardItemController._loadItems(widget.slotCount);
       widget.dashboardItemController._asyncSnap!.addListener(() {
         if (mounted) {
@@ -206,7 +221,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
       widget.dashboardItemController.itemStorageDelegate != null;
 
   ///
-  late DashboardLayoutController<T> _layoutController;
+  late _DashboardLayoutController<T> _layoutController;
 
   ///
   ViewportOffset? _offset;
@@ -214,13 +229,15 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
   ///
   ViewportOffset get offset => _offset!;
 
+  bool _reloading = false;
+
   ///
   _setNewOffset(ViewportOffset o, BoxConstraints constraints) {
     /// check slot count
     /// check new constrains equal exists
 
     _layoutController.absorbPointer = widget.absorbPointer;
-    _layoutController._viewportDelegate = ViewportDelegate(
+    _layoutController._viewportDelegate = _ViewportDelegate(
         constraints: constraints,
         padding: widget.padding.resolve(widget.textDirection),
         mainAxisSpace: widget.horizontalSpace,
@@ -229,8 +246,10 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
     if (_layoutController._isAttached &&
         (_layoutController.slotCount != widget.slotCount ||
             _layoutController.slideToTop != widget.slideToTop ||
-            _layoutController.shrinkToPlace != widget.shrinkToPlace)) {
+            _layoutController.shrinkToPlace != widget.shrinkToPlace) &&
+        !_reloading) {
       _layoutController.attach(
+          shrinkOnMove: widget.editModeSettings.shrinkOnMove,
           animateEverytime: widget.animateEverytime,
           slideToTop: widget.slideToTop,
           shrinkToPlace: widget.shrinkToPlace,
@@ -241,6 +260,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
     if (!_layoutController._isAttached) {
       _layoutController.attach(
+          shrinkOnMove: widget.editModeSettings.shrinkOnMove,
           animateEverytime: widget.animateEverytime,
           slideToTop: widget.slideToTop,
           shrinkToPlace: widget.shrinkToPlace,
@@ -262,12 +282,10 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           widget.slotCount;
     }
 
-    _layoutController._viewportDelegate.resolvedConstrains;
-
     _layoutController._setSizes(
         _layoutController._viewportDelegate.resolvedConstrains, h);
     _offset = o;
-    _offset!.applyViewportDimension(
+    offset.applyViewportDimension(
         _layoutController._viewportDelegate.constraints.maxHeight);
 
     var maxIndex = (_layoutController._endsTree.lastKey() ?? 0);
@@ -278,7 +296,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
     _maxExtend -= constraints.maxHeight;
 
-    _offset!.applyContentDimensions(
+    offset.applyContentDimensions(
         0, _maxExtend.clamp(0, double.maxFinite) + widget.padding.vertical);
   }
 
@@ -291,25 +309,74 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   bool scrollable = true;
 
+  int? _reloadFor;
+
   @override
   Widget build(BuildContext context) {
     _building = true;
+    bool differentReload = _reloadFor != widget.slotCount;
+    if (_layoutController._isAttached &&
+        (!_reloading || differentReload) &&
+        _layoutController.slotCount != widget.slotCount &&
+        _withDelegate &&
+        widget
+            .dashboardItemController.itemStorageDelegate!.layoutsBySlotCount) {
+      _reloading = true;
+      _reloadFor = widget.slotCount;
+      widget.dashboardItemController._items.clear();
+      _layoutController._startsTree.clear();
+      _layoutController._indexesTree.clear();
+      _layoutController._endsTree.clear();
+      var loader = widget.dashboardItemController._loadItems(widget.slotCount);
+
+      if (loader is Future) {
+        loader.then((value) {
+          if (_reloadFor == widget.slotCount) {
+            _reloading = false;
+            _layoutController.attach(
+                shrinkOnMove: widget.editModeSettings.shrinkOnMove,
+                animateEverytime: widget.animateEverytime,
+                slideToTop: widget.slideToTop,
+                shrinkToPlace: widget.shrinkToPlace,
+                axis: Axis.vertical,
+                itemController: widget.dashboardItemController,
+                slotCount: widget.slotCount);
+          }
+        });
+      } else {
+        if (_reloadFor == widget.slotCount) {
+          _reloading = false;
+          _layoutController.attach(
+              shrinkOnMove: widget.editModeSettings.shrinkOnMove,
+              animateEverytime: widget.animateEverytime,
+              slideToTop: widget.slideToTop,
+              shrinkToPlace: widget.shrinkToPlace,
+              axis: Axis.vertical,
+              itemController: widget.dashboardItemController,
+              slotCount: widget.slotCount);
+        }
+      }
+    }
+
     return LayoutBuilder(builder: (context, constrains) {
       Unbounded.check(Axis.vertical, constrains);
       if (_withDelegate) {
-        if (_snap!.connectionState == ConnectionState.waiting) {
-          _building = false;
-          return widget.loadingPlaceholder ??
-              const Center(
-                child: CircularProgressIndicator(),
-              );
-        } else if (_snap!.connectionState == ConnectionState.none) {
+        if (_snap!.connectionState == ConnectionState.none) {
           _building = false;
           return widget.errorPlaceholder
                   ?.call(_snap!.error!, _snap!.stackTrace!) ??
               const SizedBox();
+        } else if (_snap!.connectionState == ConnectionState.waiting ||
+            _reloading) {
+          _building = false;
+
+          return widget.loadingPlaceholder ??
+              const Center(
+                child: CircularProgressIndicator(),
+              );
         }
       }
+
       return Scrollable(
           physics: scrollable
               ? widget.physics
@@ -320,12 +387,16 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
               widget.dragStartBehavior ?? DragStartBehavior.start,
           scrollBehavior: widget.scrollBehavior,
           viewportBuilder: (c, o) {
-            _setNewOffset(o, constrains);
+            if (!_reloading) _setNewOffset(o, constrains);
             SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
               _stateKey.currentState?._listenOffset(o);
             });
             _building = false;
             return _DashboardStack<T>(
+                itemStyle: widget.itemStyle,
+                shouldCalculateNewDimensions: () {
+                  _setNewOffset(o, constrains);
+                },
                 onScrollStateChange: (st) {
                   setState(() {
                     scrollable = st;
@@ -343,17 +414,21 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
   }
 }
 
-class _ItemCurrentPositionTween extends Tween<ItemCurrentPosition> {
+class _ItemCurrentPositionTween extends Tween<_ItemCurrentPosition> {
   _ItemCurrentPositionTween(
-      {required ItemCurrentPosition begin, required ItemCurrentPosition end})
+      {required _ItemCurrentPosition begin,
+      required _ItemCurrentPosition end,
+      required this.onlyDimensions})
       : super(begin: begin, end: end);
 
+  bool onlyDimensions;
+
   @override
-  ItemCurrentPosition lerp(double t) {
-    return ItemCurrentPosition(
+  _ItemCurrentPosition lerp(double t) {
+    return _ItemCurrentPosition(
         width: begin!.width * (1.0 - t) + end!.width * t,
         height: begin!.height * (1.0 - t) + end!.height * t,
-        x: begin!.x * (1.0 - t) + end!.x * t,
-        y: begin!.y * (1.0 - t) + end!.y * t);
+        x: onlyDimensions ? end!.x : begin!.x * (1.0 - t) + end!.x * t,
+        y: onlyDimensions ? end!.y : begin!.y * (1.0 - t) + end!.y * t);
   }
 }

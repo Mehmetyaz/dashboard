@@ -1,5 +1,8 @@
 part of dashboard;
+
+/// Unbounded exception
 class Unbounded implements Exception {
+  /// Create with constraints and axis.
   Unbounded({required this.constraints, required this.axis});
 
   static void check(Axis axis, BoxConstraints constraints) {

@@ -9,11 +9,13 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
       required this.itemBuilder,
       required this.cacheExtend,
       required this.maxScrollOffset,
-      required this.onScrollStateChange})
+      required this.onScrollStateChange,
+      required this.shouldCalculateNewDimensions,
+      required this.itemStyle})
       : super(key: key);
 
   final ViewportOffset offset;
-  final DashboardLayoutController<T> dashboardController;
+  final _DashboardLayoutController<T> dashboardController;
   final double cacheExtend;
   final EditModeSettings editModeSettings;
   final double maxScrollOffset;
@@ -21,6 +23,10 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
 
   ///
   final DashboardItemBuilder<T> itemBuilder;
+
+  final ItemStyle itemStyle;
+
+  final void Function() shouldCalculateNewDimensions;
 
   @override
   State<_DashboardStack<T>> createState() => _DashboardStackState<T>();
@@ -31,7 +37,7 @@ class _DashboardStackState<T extends DashboardItem>
   ///
   ViewportOffset get viewportOffset => widget.offset;
 
-  ViewportDelegate get viewportDelegate =>
+  _ViewportDelegate get viewportDelegate =>
       widget.dashboardController._viewportDelegate;
 
   ///
@@ -51,6 +57,7 @@ class _DashboardStackState<T extends DashboardItem>
 
   ///
   _listenOffset(ViewportOffset o) {
+    setState(() {});
     o.removeListener(_listen);
     o.addListener(_listen);
   }
@@ -58,14 +65,12 @@ class _DashboardStackState<T extends DashboardItem>
   ///
   @override
   void didChangeDependencies() {
-    _listenOffset(viewportOffset);
     _widgetsMap.clear();
     super.didChangeDependencies();
   }
 
   @override
   void initState() {
-    _listenOffset(viewportOffset);
     _widgetsMap.clear();
     super.initState();
   }
@@ -82,8 +87,9 @@ class _DashboardStackState<T extends DashboardItem>
 
   Widget buildPositioned(List list) {
     return _DashboardItemWidget(
+      style: widget.itemStyle,
       key: _keys[list[2]]!,
-      itemGlobalPosition: (list[0] as ItemCurrentLayout).currentPosition(
+      itemGlobalPosition: (list[0] as _ItemCurrentLayout)._currentPosition(
           viewportDelegate: viewportDelegate,
           slotEdge: slotEdge,
           verticalSlotEdge: verticalSlotEdge),
@@ -91,7 +97,7 @@ class _DashboardStackState<T extends DashboardItem>
       id: list[2],
       editModeSettings: widget.editModeSettings,
       child: list[1],
-      offset: pixels,
+      offset: viewportOffset,
       layoutController: widget.dashboardController,
     );
   }
@@ -104,9 +110,20 @@ class _DashboardStackState<T extends DashboardItem>
     var i = widget.dashboardController.itemController._items[id];
     var l = widget.dashboardController._layouts![i!.identifier]!;
     i.layoutData = l.asLayout();
+
     _widgetsMap[id] = [
       l,
-      widget.itemBuilder(i),
+      Material(
+        elevation: widget.itemStyle.elevation ?? 0.0,
+        child: widget.itemBuilder(i),
+        type: widget.itemStyle.type ?? MaterialType.card,
+        shape: widget.itemStyle.shape,
+        color: widget.itemStyle.color,
+        clipBehavior: widget.itemStyle.clipBehavior ?? Clip.none,
+        animationDuration:
+            widget.itemStyle.animationDuration ?? kThemeChangeDuration,
+        //shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
       id,
     ];
 
@@ -118,6 +135,11 @@ class _DashboardStackState<T extends DashboardItem>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.dashboardController._rebuild) {
+      _widgetsMap.clear();
+      widget.dashboardController._rebuild = false;
+    }
+
     slotEdge = widget.dashboardController.slotEdge;
     verticalSlotEdge = widget.dashboardController.verticalSlotEdge;
     var startPixels = (viewportOffset.pixels) - widget.cacheExtend;
@@ -197,7 +219,7 @@ class _DashboardStackState<T extends DashboardItem>
     Widget result = Stack(
       clipBehavior: Clip.hardEdge,
       children: [
-        if (widget.editModeSettings.paintBackground &&
+        if (widget.editModeSettings.paintBackgroundLines &&
             widget.dashboardController.isEditing)
           Positioned(
             top: viewportDelegate.padding.top,
@@ -207,10 +229,10 @@ class _DashboardStackState<T extends DashboardItem>
             height: viewportDelegate.constraints.maxHeight -
                 viewportDelegate.padding.horizontal,
             child: Builder(builder: (context) {
-              return AnimatedBackgroundPainter(
+              return _AnimatedBackgroundPainter(
                   layoutController: widget.dashboardController,
                   editModeSettings: widget.editModeSettings,
-                  offset: viewportOffset.pixels);
+                  offset: viewportOffset);
             }),
           ),
         ..._widgetsMap.entries
@@ -231,38 +253,38 @@ class _DashboardStackState<T extends DashboardItem>
 
     if (widget.dashboardController.isEditing) {
       result = GestureDetector(
-        onPanStart: kIsWeb
+        onPanStart: widget.editModeSettings.panEnabled
             ? (panStart) {
                 _onMoveStart(panStart.localPosition);
               }
             : null,
-        onPanUpdate: kIsWeb
+        onPanUpdate: widget.editModeSettings.panEnabled
             ? (u) {
                 setSpeed(u.localPosition);
                 _onMoveUpdate(u.localPosition);
               }
             : null,
-        onPanEnd: kIsWeb
+        onPanEnd: widget.editModeSettings.panEnabled
             ? (e) {
                 _onMoveEnd();
               }
             : null,
-        onLongPressStart: kIsWeb
-            ? null
-            : (longPressStart) {
+        onLongPressStart: widget.editModeSettings.longPressEnabled
+            ? (longPressStart) {
                 _onMoveStart(longPressStart.localPosition);
-              },
-        onLongPressMoveUpdate: kIsWeb
-            ? null
-            : (u) {
+              }
+            : null,
+        onLongPressMoveUpdate: widget.editModeSettings.longPressEnabled
+            ? (u) {
                 setSpeed(u.localPosition);
                 _onMoveUpdate(u.localPosition);
-              },
-        onLongPressEnd: kIsWeb
-            ? null
-            : (e) {
+              }
+            : null,
+        onLongPressEnd: widget.editModeSettings.longPressEnabled
+            ? (e) {
                 _onMoveEnd();
-              },
+              }
+            : null,
         child: result,
       );
     }
@@ -286,10 +308,15 @@ class _DashboardStackState<T extends DashboardItem>
 
   void scroll() {
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      if (speed != 0) {
-        viewportOffset.jumpTo((pixels + speed)
-            .clamp(0, widget.maxScrollOffset + (verticalSlotEdge * 2)));
-        scroll();
+      try {
+        if (speed != 0) {
+          var n = pixels + speed;
+
+          viewportOffset.jumpTo(n.clamp(0.0, (1 << 31).toDouble()));
+          scroll();
+        }
+      } catch (e) {
+        rethrow;
       }
     });
   }
@@ -316,11 +343,11 @@ class _DashboardStackState<T extends DashboardItem>
     if (e is String) {
       var directions = <AxisDirection>[];
       _editing = widget.dashboardController._layouts![e]!;
-      var _current = _editing!.currentPosition(
+      var _current = _editing!._currentPosition(
           slotEdge: slotEdge,
           viewportDelegate: viewportDelegate,
           verticalSlotEdge: verticalSlotEdge);
-      var _itemGlobal = ItemCurrentPosition(
+      var _itemGlobal = _ItemCurrentPosition(
           x: _current.x - viewportDelegate.padding.left,
           y: _current.y - viewportDelegate.padding.top - pixels,
           height: _current.height,
@@ -376,7 +403,7 @@ class _DashboardStackState<T extends DashboardItem>
     }
   }
 
-  ItemCurrentLayout? _editing;
+  _ItemCurrentLayout? _editing;
 
   bool get _editingResize => _holdDirections != null;
   List<AxisDirection>? _holdDirections;
@@ -388,6 +415,8 @@ class _DashboardStackState<T extends DashboardItem>
 
   void _onMoveUpdate(Offset local) {
     if (_editing != null) {
+      var e = widget.dashboardController._endsTree.lastKey() ?? 0;
+
       if (_editingResize) {
         var scrollDifference = pixels - _startScrollPixels!;
         var difs = <String>{};
@@ -408,6 +437,9 @@ class _DashboardStackState<T extends DashboardItem>
             for (var r in difs) {
               _widgetsMap.remove(r);
             }
+            if (_editing!._endIndex > (e)) {
+              widget.shouldCalculateNewDimensions();
+            }
           });
         }
       } else {
@@ -418,6 +450,9 @@ class _DashboardStackState<T extends DashboardItem>
             _moveStartOffset =
                 _moveStartOffset! + resizeMoveResult.startDifference;
             _widgetsMap.remove(_editing!.id);
+            if (_editing!._endIndex > (e)) {
+              widget.shouldCalculateNewDimensions();
+            }
           });
         }
       }
@@ -427,9 +462,11 @@ class _DashboardStackState<T extends DashboardItem>
   void _onMoveEnd() {
     _editing?._key = _keys[_editing!.id]!;
     _editing?._key.currentState
-        ?._setLast(_editing!._transform.value, _editing!._resizePosition.value)
+        ?._setLast(
+            _editing!._transform?.value, _editing!._resizePosition?.value)
         .then((value) {
       widget.dashboardController.editSession?.editing._originSize = null;
+      _editing?._clearListeners();
       _editing = null;
       _moveStartOffset = null;
       _holdDirections = null;
@@ -438,8 +475,5 @@ class _DashboardStackState<T extends DashboardItem>
       widget.dashboardController.saveEditSession();
     });
     widget.onScrollStateChange(true);
-    _editing?._transform.value = Offset.zero;
-    _editing?._resizePosition.value =
-        ItemCurrentPosition(height: 0, width: 0, y: 0, x: 0);
   }
 }

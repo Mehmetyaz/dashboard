@@ -9,16 +9,18 @@ class _DashboardItemWidget extends StatefulWidget {
       required this.id,
       required this.itemCurrentLayout,
       required this.itemGlobalPosition,
-      required this.offset})
+      required this.offset,
+      required this.style})
       : super(key: key);
 
-  final ItemCurrentLayout itemCurrentLayout;
+  final _ItemCurrentLayout itemCurrentLayout;
   final Widget child;
   final String id;
-  final DashboardLayoutController layoutController;
+  final _DashboardLayoutController layoutController;
   final EditModeSettings editModeSettings;
-  final ItemCurrentPosition itemGlobalPosition;
-  final double offset;
+  final _ItemCurrentPosition itemGlobalPosition;
+  final ViewportOffset offset;
+  final ItemStyle style;
 
   @override
   State<_DashboardItemWidget> createState() => _DashboardItemWidgetState();
@@ -34,7 +36,12 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
   void dispose() {
     _animationController.dispose();
     _multiplierAnimationController.dispose();
+    widget.itemCurrentLayout.removeListener(_listen);
     super.dispose();
+  }
+
+  _listen() {
+    setState(() {});
   }
 
   late AnimationController _multiplierAnimationController;
@@ -43,32 +50,32 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
   void initState() {
     cursor = MouseCursor.defer;
     _animationController = AnimationController(
-        vsync: this,
-        duration: widget.editModeSettings.fillBackgroundAnimationDuration);
+        vsync: this, duration: widget.editModeSettings.duration);
     _multiplierAnimationController = AnimationController(
-        vsync: this,
-        value: 0,
-        duration: widget.editModeSettings.fillBackgroundAnimationDuration);
+        vsync: this, value: 0, duration: widget.editModeSettings.duration);
+    widget.itemCurrentLayout.addListener(_listen);
     super.initState();
   }
 
-  ItemCurrentPosition get _resizePosition =>
-      widget.itemCurrentLayout._resizePosition.value;
+  _ItemCurrentPosition? get _resizePosition =>
+      widget.itemCurrentLayout._resizePosition?.value;
 
   bool onRightSide(double dX) =>
       dX >
-      (widget.itemGlobalPosition.width + _resizePosition.width) -
+      (widget.itemGlobalPosition.width + (_resizePosition?.width ?? 0)) -
           widget.editModeSettings.resizeCursorSide;
 
   bool onLeftSide(double dX) =>
-      (dX + _resizePosition.x) < widget.editModeSettings.resizeCursorSide;
+      (dX + (_resizePosition?.x ?? 0)) <
+      widget.editModeSettings.resizeCursorSide;
 
   bool onTopSide(double dY) =>
-      (dY + _resizePosition.y) < widget.editModeSettings.resizeCursorSide;
+      (dY + (_resizePosition?.y ?? 0)) <
+      widget.editModeSettings.resizeCursorSide;
 
   bool onBottomSide(double dY) =>
       dY >
-      (widget.itemGlobalPosition.height + _resizePosition.height) -
+      (widget.itemGlobalPosition.height + (_resizePosition?.height ?? 0)) -
           widget.editModeSettings.resizeCursorSide;
 
   void _hover(PointerHoverEvent hover) {
@@ -121,27 +128,31 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
 
   double startScrollOffset = 0;
 
-  ItemCurrentLayout get l => widget.itemCurrentLayout;
+  _ItemCurrentLayout get l => widget.itemCurrentLayout;
 
   //late BoxConstraints c;
 
   double get slotEdge => widget.layoutController.slotEdge;
 
-  ItemCurrentPosition? ex;
+  _ItemCurrentPosition? ex;
 
   late AnimationController _animationController;
-  Animation<ItemCurrentPosition>? _animation;
+  Animation<_ItemCurrentPosition>? _animation;
 
   Offset? _lastTransform;
-  ItemCurrentPosition? _lastPosition;
+  _ItemCurrentPosition? _lastPosition;
 
   Future<void> _setLast(
-      Offset lastOffset, ItemCurrentPosition lastPosition) async {
+      Offset? lastOffset, _ItemCurrentPosition? lastPosition) async {
     _lastTransform = lastOffset;
     _lastPosition = lastPosition;
     _multiplierAnimationController.reset();
     _multiplierAnimationController.value = 1;
-    await _multiplierAnimationController.animateTo(0).then((value) {
+    await _multiplierAnimationController
+        .animateTo(0,
+            duration: widget.editModeSettings.duration,
+            curve: widget.editModeSettings.curve)
+        .then((value) {
       setState(() {
         _lastTransform = null;
         _lastPosition = null;
@@ -151,15 +162,21 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
 
   bool get onEditMode => widget.layoutController.isEditing;
 
+  ItemLayout? _exLayout;
+
+  bool equal() {
+    return _exLayout!.startX == widget.itemCurrentLayout.startX &&
+        _exLayout!.startY == widget.itemCurrentLayout.startY &&
+        _exLayout!.width == widget.itemCurrentLayout.width &&
+        _exLayout!.height == widget.itemCurrentLayout.height;
+  }
+
+  bool onAnimation = false;
+  DateTime? animationStart;
+
   @override
   Widget build(BuildContext context) {
-    Widget result = Material(
-      elevation: 10,
-      child: widget.child,
-      color: Colors.transparent,
-      type: MaterialType.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    );
+    Widget result = widget.child;
 
     if (onEditMode) {
       if (widget.layoutController.absorbPointer) {
@@ -176,26 +193,67 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
       }
     }
 
-    if ((onEditMode || widget.layoutController.animateEverytime) &&
-        ex != null &&
-        !ex!.equal(widget.itemGlobalPosition)) {
+    var currentEdit = widget.layoutController.editSession?.editing.id ==
+        widget.itemCurrentLayout.id;
 
+    var transform =
+        currentEdit ? widget.layoutController.editSession!.transform : false;
+
+    var onlyDimensions = currentEdit && transform;
+
+    if (onAnimation ||
+        ((currentEdit ? transform : true) &&
+            (onEditMode || widget.layoutController.animateEverytime) &&
+            ex != null &&
+            (widget.itemCurrentLayout._change))) {
+      widget.itemCurrentLayout._change = false;
+
+      if (onAnimation) {
+        ex = _animation!.value;
+
+        var difMicro = (widget.editModeSettings.duration -
+                (DateTime.now().difference(animationStart!).abs()))
+            .inMicroseconds;
+        _animationController.duration = Duration(
+            microseconds: difMicro.clamp(
+                0, widget.editModeSettings.duration.inMicroseconds));
+      } else {
+        animationStart = DateTime.now();
+        onAnimation = true;
+      }
       _animationController.reset();
-      _animation =
-          _ItemCurrentPositionTween(begin: ex!, end: widget.itemGlobalPosition)
-              .animate(_animationController);
-      SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-        _animationController.forward();
+
+      _animation = CurvedAnimation(
+              parent: _animationController,
+              curve: widget.editModeSettings.curve)
+          .drive(_ItemCurrentPositionTween(
+              begin: onlyDimensions
+                  ? _ItemCurrentPosition(
+                      height: ex!.height,
+                      width: ex!.width,
+                      y: widget.itemGlobalPosition.y,
+                      x: widget.itemGlobalPosition.x)
+                  : ex!,
+              end: widget.itemGlobalPosition,
+              onlyDimensions: onlyDimensions));
+
+      _animationController.forward().then((value) {
+        onAnimation = false;
+        animationStart = null;
+        _animationController.duration = widget.editModeSettings.duration;
+        _animation = null;
+        widget.itemCurrentLayout._change = false;
+        ex = widget.itemGlobalPosition;
       });
+    } else {
+      ex = widget.itemGlobalPosition;
+      widget.itemCurrentLayout._change = false;
     }
-
-    ex = widget.itemGlobalPosition;
-
     if (!onEditMode && !widget.layoutController.animateEverytime) {
       var cp = widget.itemGlobalPosition;
       return Positioned(
           left: cp.x,
-          top: cp.y - widget.offset,
+          top: cp.y - widget.offset.pixels,
           width: cp.width,
           height: cp.height,
           child: result);
@@ -203,52 +261,58 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
 
     return AnimatedBuilder(
       animation: Listenable.merge([
-        widget.itemCurrentLayout._resizePosition,
-        widget.itemCurrentLayout._transform,
+        if (widget.itemCurrentLayout._resizePosition != null)
+          widget.itemCurrentLayout._resizePosition,
+        if (widget.itemCurrentLayout._transform != null)
+          widget.itemCurrentLayout._transform,
         if (_animation != null) _animation,
-        _multiplierAnimationController
+        if (onEditMode) _multiplierAnimationController,
       ]),
       child: result,
       builder: (c, w) {
         var m = _multiplierAnimationController.value;
 
-        var p = widget.itemCurrentLayout._resizePosition.value;
+        var p = widget.itemCurrentLayout._resizePosition?.value;
 
-        if (_lastPosition != null) {
-          p += ItemCurrentPosition(
-              height: _lastPosition!.height * m,
-              width: _lastPosition!.width * m,
-              y: _lastPosition!.y * m,
-              x: _lastPosition!.x * m);
+        var cp = onAnimation
+            ? (_animation?.value ?? widget.itemGlobalPosition)
+            : widget.itemGlobalPosition;
+
+        if (p != null) {
+          if (_lastPosition != null) {
+            p = _lastPosition! * m;
+          }
+          cp += p;
+        }
+        double left = cp.x, top = cp.y;
+
+        var o = widget.itemCurrentLayout._transform?.value;
+
+        if (o != null) {
+          if (_lastTransform != null) {
+            o = _lastTransform! * m;
+          }
+          left += o.dx;
+          top += o.dy;
         }
 
-        var o = widget.itemCurrentLayout._transform.value;
-
-        if (_lastTransform != null) {
-          o += _lastTransform! * m;
-        }
-
-        var cp = ((widget.layoutController.editSession?.editing.id ==
-                    widget.itemCurrentLayout.id)
-                ? widget.itemGlobalPosition
-                : (_animation?.value ?? widget.itemGlobalPosition)) +
-            p;
         return Positioned(
-            left: cp.x + o.dx,
-            top: cp.y + o.dy - widget.offset,
+            left: left,
+            top: top - widget.offset.pixels,
             width: cp.width,
             height: cp.height,
-            child: widget.layoutController.isEditing &&
+            child: /*widget.layoutController.isEditing &&
                     widget.editModeSettings.paintItemForeground
                 ? CustomPaint(
                     child: w!,
-                    foregroundPainter: EditModeItemPainter(
+                    foregroundPainter: _EditModeItemPainter(
                         style: widget.editModeSettings.foregroundStyle,
                         tolerance: widget.editModeSettings.resizeCursorSide,
                         constraints: BoxConstraints(
                             maxHeight: cp.height, maxWidth: cp.width)),
                   )
-                : w!);
+                :*/
+                w!);
       },
     );
   }
