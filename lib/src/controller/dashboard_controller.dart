@@ -120,10 +120,10 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
   /// Delete multiple items from Dashboard.
   void deleteAll(List<String> ids) {
     if (_isAttached) {
-      _layoutController!.deleteAll(ids);
       itemStorageDelegate?._onItemsDeleted(
           ids.map((e) => _getItemWithLayout(e)).toList(),
           _layoutController!.slotCount);
+      _layoutController!.deleteAll(ids);
       _items.removeWhere((k, v) => ids.contains(k));
     } else {
       throw Exception("Not Attached");

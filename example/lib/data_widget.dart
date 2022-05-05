@@ -175,7 +175,7 @@ class BuyMee extends StatelessWidget {
           alignment: Alignment.center,
           decoration: const BoxDecoration(
               image: DecorationImage(
-                  fit: BoxFit.cover, image: AssetImage("assets/slots.png")))),
+                  fit: BoxFit.cover, image: AssetImage("assets/img.png")))),
     );
   }
 }

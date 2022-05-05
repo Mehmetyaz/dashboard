@@ -333,7 +333,6 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   };
 
   Map<int, Map<String, ColoredDashboardItem>>? _localItems;
-
   @override
   FutureOr<List<ColoredDashboardItem>> getAllItems(int slotCount) {
     try {
