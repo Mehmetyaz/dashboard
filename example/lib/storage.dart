@@ -333,6 +333,7 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   };
 
   Map<int, Map<String, ColoredDashboardItem>>? _localItems;
+
   @override
   FutureOr<List<ColoredDashboardItem>> getAllItems(int slotCount) {
     try {
@@ -343,7 +344,9 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
       return Future.microtask(() async {
         _preferences = await SharedPreferences.getInstance();
 
-        if (!_preferences.containsKey("layout_data_$slotCount")) {
+        var init = _preferences.getBool("init") ?? false;
+
+        if (!init) {
           _localItems = {
             for (var s in _slotCounts)
               s: _default[s]!
@@ -357,17 +360,11 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
                 json.encode(_default[s]!.asMap().map((key, value) =>
                     MapEntry(value.identifier, value.toMap()))));
           }
+
+          await _preferences.setBool("init", true);
         }
 
         var js = json.decode(_preferences.getString("layout_data_$slotCount")!);
-
-        if (js.isEmpty) {
-          await _preferences.setString(
-              "layout_data_$slotCount",
-              json.encode(_default[slotCount]!.asMap().map(
-                  (key, value) => MapEntry(value.identifier, value.toMap()))));
-          js = json.decode(_preferences.getString("layout_data_$slotCount")!);
-        }
 
         return js!.values
             .map<ColoredDashboardItem>(
@@ -382,22 +379,12 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   @override
   FutureOr<void> onItemsUpdated(
       List<ColoredDashboardItem> items, int slotCount) async {
-    var itemsForSlot = itemsFor(slotCount) ??
-        _default[slotCount]!
-            .asMap()
-            .map((key, value) => MapEntry(value.identifier, value));
-    _localItems ??= {};
-    _localItems![slotCount] ??= _default[slotCount]!
-        .asMap()
-        .map((key, value) => MapEntry(value.identifier, value));
-
     for (var item in items) {
-      itemsForSlot[item.identifier] = item;
       _localItems?[slotCount]?[item.identifier] = item;
     }
 
-    var js = json
-        .encode(itemsForSlot.map((key, value) => MapEntry(key, value.toMap())));
+    var js = json.encode(_localItems![slotCount]!
+        .map((key, value) => MapEntry(key, value.toMap())));
 
     await _preferences.setString("layout_data_$slotCount", js);
   }
@@ -406,25 +393,14 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   FutureOr<void> onItemsAdded(
       List<ColoredDashboardItem> items, int slotCount) async {
     for (var s in _slotCounts) {
-      var itemsForSlot = itemsFor(s) ??
-          _default[s]!
-              .asMap()
-              .map((key, value) => MapEntry(value.identifier, value));
-
-      _localItems ??= {};
-      _localItems![s] ??= _default[s]!
-          .asMap()
-          .map((key, value) => MapEntry(value.identifier, value));
-
       for (var i in items) {
-        itemsForSlot[i.identifier] = i;
         _localItems![s]?[i.identifier] = i;
       }
 
       await _preferences.setString(
           "layout_data_$s",
-          json.encode(
-              itemsForSlot.map((key, value) => MapEntry(key, value.toMap()))));
+          json.encode(_localItems![s]!
+              .map((key, value) => MapEntry(key, value.toMap()))));
     }
   }
 
@@ -432,21 +408,14 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   FutureOr<void> onItemsDeleted(
       List<ColoredDashboardItem> items, int slotCount) async {
     for (var s in _slotCounts) {
-      var itemsForSlot = itemsFor(s)!;
-
-      _localItems![s] ??= _default[s]!
-          .asMap()
-          .map((key, value) => MapEntry(value.identifier, value));
-
       for (var i in items) {
-        itemsForSlot.remove(i.identifier);
         _localItems![s]?.remove(i.identifier);
       }
 
       await _preferences.setString(
           "layout_data_$s",
-          json.encode(
-              itemsForSlot.map((key, value) => MapEntry(key, value.toMap()))));
+          json.encode(_localItems![s]!
+              .map((key, value) => MapEntry(key, value.toMap()))));
     }
   }
 
@@ -455,6 +424,8 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
       _localItems?[s]?.clear();
       await _preferences.remove("layout_data_$s");
     }
+    _localItems = null;
+    await _preferences.setBool("init", false);
   }
 
   @override

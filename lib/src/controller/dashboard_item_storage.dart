@@ -111,7 +111,7 @@ abstract class DashboardItemStorageDelegate<T extends DashboardItem> {
         }
       });
     }
-    return onItemsAdded(items, slotCount);
+    return onItemsDeleted(items, slotCount);
   }
 
   /// [getAllItems] will call if necessary. If your item getter is not Future,

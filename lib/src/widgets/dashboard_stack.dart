@@ -307,7 +307,7 @@ class _DashboardStackState<T extends DashboardItem>
   }
 
   void scroll() {
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+    SchedulerBinding.instance?.addPostFrameCallback((timeStamp) {
       try {
         if (speed != 0) {
           var n = pixels + speed;

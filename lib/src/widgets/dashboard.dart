@@ -388,7 +388,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           scrollBehavior: widget.scrollBehavior,
           viewportBuilder: (c, o) {
             if (!_reloading) _setNewOffset(o, constrains);
-            SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+            SchedulerBinding.instance?.addPostFrameCallback((timeStamp) {
               _stateKey.currentState?._listenOffset(o);
             });
             _building = false;
