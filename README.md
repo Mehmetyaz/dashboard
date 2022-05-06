@@ -3,7 +3,7 @@ Dynamic dashboard widget that allows your users to create their own layouts. Rez
 
 ## Features
 
-[Try online demo](https:/www.styledart.dev/#/dashboard)
+[Try online demo](https://styledart.dev/#/dashboard)
 
 Dashboard can be thought of as a dynamic grid. Your users can create their own layouts, add new widgets or remove widgets.
 
@@ -116,6 +116,7 @@ Dashboard(
 
 Each item is wrapped with a Material widget. You can enter the parameters of the Material widget with item style.
 
+All is optional.
 ```dart
 ItemStyle(  
   color: Colors.red,  
@@ -139,30 +140,70 @@ Slide to top items initially. Auto relayout places items to top as possible.
 
 Before: 
 
+<img src="https://github.com/Mehmetyaz/dashboard/blob/master/documentation/before.png?raw=true" width="400"/>>
+
+After: 
+
+<img src="https://github.com/Mehmetyaz/dashboard/blob/master/documentation/after.png?raw=true" width="400"/>>
+
 #### Shrink
 
-Shrink items when re-layout or editing.
+Shrink items when re-layout or editing is possible.
 
-/// CODE
 
 ### Edit Mode Settings
 See code comments for edit mode settings parameters.
-/// CODE
 
-### Edit Mode Style
+All is optional.
+````dart
+    EditModeSettings(
 
-See code comments for edit mode style parameters.
-/// CODE
+        // animation settings
+        curve: Curves.easeInOutCirc,
+        duration: const Duration(milliseconds: 200),
+        
+        // fill editing item actual size
+        fillEditingBackground: true,
+
+        // space that can be held to resize
+        resizeCursorSide: 20,
+        
+        // draw lines for slots
+        paintBackgroundLines: true,
+        
+        // shrink items when editing if possible and necessary
+        shrinkOnMove: true,
+        
+        // long press to edit
+        longPressEnabled: true,
+        
+        // pan to edit
+        panEnabled: true,
+        
+        backgroundStyle: const EditModeBackgroundStyle(
+            fillColor: Colors.red,
+            lineWidth: 1.5,
+            lineColor: Colors.black,
+            
+            // line by vertical space
+            dualLineHorizontal: true,
+
+            // line by horizontal space
+            dualLineVertical: true));
+````
 
 ### Storage Delegate
 
 [See example](https://pub.dev/packages/dashboard/example)
 
-## Additional information
+## Additional
 
-Create Issue
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/mehmetyaz)
 
-Buy Me A Coffee!
-
-TODO:  
-animation performance test
+TODO  
+ - [ ] Define and fix animation bugs.
+ - [ ] Check performance improvements.
+ - [ ] Write tests.
+ - [ ] Add more documentation.
+ - [ ] Add more example.
+ - [ ] Create Youtube video.
