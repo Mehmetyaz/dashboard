@@ -73,7 +73,7 @@ class _AnimatedBackgroundPainterState extends State<_AnimatedBackgroundPainter>
         _animation = RectTween(begin: begin, end: rect).animate(CurvedAnimation(
             parent: _animationController,
             curve: widget.editModeSettings.curve));
-        SchedulerBinding.instance?.addPostFrameCallback((timeStamp) {
+        SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
           onAnimation = true;
           _animationController.forward().then((value) {
             _animationController.duration = widget.editModeSettings.duration;

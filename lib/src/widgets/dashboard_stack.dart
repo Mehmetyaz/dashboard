@@ -115,13 +115,13 @@ class _DashboardStackState<T extends DashboardItem>
       l,
       Material(
         elevation: widget.itemStyle.elevation ?? 0.0,
-        child: widget.itemBuilder(i),
         type: widget.itemStyle.type ?? MaterialType.card,
         shape: widget.itemStyle.shape,
         color: widget.itemStyle.color,
         clipBehavior: widget.itemStyle.clipBehavior ?? Clip.none,
         animationDuration:
             widget.itemStyle.animationDuration ?? kThemeChangeDuration,
+        child: widget.itemBuilder(i),
         //shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       id,
@@ -307,7 +307,7 @@ class _DashboardStackState<T extends DashboardItem>
   }
 
   void scroll() {
-    SchedulerBinding.instance?.addPostFrameCallback((timeStamp) {
+    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       try {
         if (speed != 0) {
           var n = pixels + speed;
@@ -343,36 +343,36 @@ class _DashboardStackState<T extends DashboardItem>
     if (e is String) {
       var directions = <AxisDirection>[];
       _editing = widget.dashboardController._layouts![e]!;
-      var _current = _editing!._currentPosition(
+      var current = _editing!._currentPosition(
           slotEdge: slotEdge,
           viewportDelegate: viewportDelegate,
           verticalSlotEdge: verticalSlotEdge);
-      var _itemGlobal = _ItemCurrentPosition(
-          x: _current.x - viewportDelegate.padding.left,
-          y: _current.y - viewportDelegate.padding.top - pixels,
-          height: _current.height,
-          width: _current.width);
-      if (holdGlobal.dx < _itemGlobal.x || holdGlobal.dy < _itemGlobal.y) {
+      var itemGlobal = _ItemCurrentPosition(
+          x: current.x - viewportDelegate.padding.left,
+          y: current.y - viewportDelegate.padding.top - pixels,
+          height: current.height,
+          width: current.width);
+      if (holdGlobal.dx < itemGlobal.x || holdGlobal.dy < itemGlobal.y) {
         _editing = null;
         setState(() {});
         return;
       }
-      if (_itemGlobal.x + widget.editModeSettings.resizeCursorSide >
+      if (itemGlobal.x + widget.editModeSettings.resizeCursorSide >
           holdGlobal.dx) {
         directions.add(AxisDirection.left);
       }
 
-      if ((_itemGlobal.y) + widget.editModeSettings.resizeCursorSide >
+      if ((itemGlobal.y) + widget.editModeSettings.resizeCursorSide >
           holdGlobal.dy) {
         directions.add(AxisDirection.up);
       }
 
-      if (_itemGlobal.endX - widget.editModeSettings.resizeCursorSide <
+      if (itemGlobal.endX - widget.editModeSettings.resizeCursorSide <
           holdGlobal.dx) {
         directions.add(AxisDirection.right);
       }
 
-      if ((_itemGlobal.endY) - widget.editModeSettings.resizeCursorSide <
+      if ((itemGlobal.endY) - widget.editModeSettings.resizeCursorSide <
           holdGlobal.dy) {
         directions.add(AxisDirection.down);
       }

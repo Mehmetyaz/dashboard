@@ -573,7 +573,7 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
 
   ///
   ItemLayout? tryMount(int value, ItemLayout itemLayout) {
-    var _shrinkToPlace = shrinkOnMove ?? shrinkToPlace;
+    var shrinkToPlaceL = shrinkOnMove ?? shrinkToPlace;
 
     var r = getIndexCoordinate(value);
     var n = itemLayout.copyWithStarts(startX: r[0], startY: r[1]);
@@ -586,11 +586,11 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
 
       var exOut = n.startX + n.width > slotCount;
 
-      if (exOut && !_shrinkToPlace) {
+      if (exOut && !shrinkToPlaceL) {
         return null;
       }
 
-      if (_shrinkToPlace && exOut) {
+      if (shrinkToPlaceL && exOut) {
         // Not fit to viewport
         if (n.minWidth < n.width) {
           n = n.copyWithDimension(width: n.width - 1);
@@ -605,7 +605,7 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
           // both null
           return n;
         } else {
-          if (_shrinkToPlace) {
+          if (shrinkToPlaceL) {
             var eX = overflows[0] ?? (n.startX + n.width);
             var eY = overflows[1] ?? (n.startY + n.height);
 
@@ -789,11 +789,11 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
     return l;
   }
 
-  void _setSizes(BoxConstraints _constrains, double vertical) {
+  void _setSizes(BoxConstraints constrains, double vertical) {
     verticalSlotEdge = vertical;
     slotEdge = (_axis == Axis.vertical
-            ? _constrains.maxWidth
-            : _constrains.maxHeight) /
+            ? constrains.maxWidth
+            : constrains.maxHeight) /
         slotCount;
   }
 
@@ -892,11 +892,11 @@ class _EditSession {
     // _resizes[resize.resize.direction] ??= [];
     // _resizes[resize.resize.direction]!.add(resize.resize);
     if (resize.resize.increment && resize.indirectResizes != null) {
-      for (var _indirect in resize.indirectResizes!.entries) {
-        _indirectChanges[_indirect.value.direction] ??= {};
-        _indirectChanges[_indirect.value.direction]![_indirect.key] ??= [];
-        _indirectChanges[_indirect.value.direction]![_indirect.key]!
-            .add(_indirect.value);
+      for (var indirect in resize.indirectResizes!.entries) {
+        _indirectChanges[indirect.value.direction] ??= {};
+        _indirectChanges[indirect.value.direction]![indirect.key] ??= [];
+        _indirectChanges[indirect.value.direction]![indirect.key]!
+            .add(indirect.value);
       }
     }
 
@@ -918,10 +918,10 @@ class _EditSession {
       if (reverseIndirectResizes == null) {
         return;
       } else {
-        for (var _resize in reverseIndirectResizes.entries) {
-          if (_resize.value.isNotEmpty) {
+        for (var resize in reverseIndirectResizes.entries) {
+          if (resize.value.isNotEmpty) {
             onBackChange(
-                _resize.key, _resize.value.removeAt(_resize.value.length - 1));
+                resize.key, resize.value.removeAt(resize.value.length - 1));
           }
         }
       }

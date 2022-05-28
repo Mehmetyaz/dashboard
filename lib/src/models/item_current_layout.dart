@@ -186,8 +186,8 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
   bool get _haveLocation => origin._haveLocation;
 
   @override
-  set _haveLocation(bool __haveLocation) {
-    origin._haveLocation = __haveLocation;
+  set _haveLocation(bool haveLocation) {
+    origin._haveLocation = haveLocation;
   }
 
   /*
@@ -235,27 +235,27 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
   }
 
   double _clampDifLeft(double x) {
-    var _slot = _slotEdge;
-    return x.clamp(0, (width - minWidth) * _slot);
+    var slot = _slotEdge;
+    return x.clamp(0, (width - minWidth) * slot);
   }
 
   double _clampDifRight(double x) {
-    var _slot = _slotEdge;
+    var slot = _slotEdge;
     return x.clamp(
-      (width - minWidth) * -_slot,
+      (width - minWidth) * -slot,
       0,
     );
   }
 
   double _clampDifTop(double y) {
-    var _slot = _verticalSlotEdge;
-    return y.clamp(0, (height - minHeight) * _slot);
+    var slot = _verticalSlotEdge;
+    return y.clamp(0, (height - minHeight) * slot);
   }
 
   double _clampDifBottom(double y) {
-    var _slot = _verticalSlotEdge;
+    var slot = _verticalSlotEdge;
     return y.clamp(
-      (height - minHeight) * -_slot,
+      (height - minHeight) * -slot,
       0,
     );
   }
@@ -513,10 +513,10 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
     if (resize == null) return null;
     var direction = resize.direction;
     if (resize.increment) {
-      var _sideItems = sideItems(direction);
-      if (_sideItems == null) {
+      var lSideItems = sideItems(direction);
+      if (lSideItems == null) {
         return null;
-      } else if (_sideItems.isEmpty) {
+      } else if (lSideItems.isEmpty) {
         if (direction == AxisDirection.left) {
           if ((maxWidth == null || width < maxWidth!) &&
               width < _layoutController.slotCount) {
@@ -543,25 +543,25 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
           }
         }
       } else {
-        Map<String, _Change> _indirectResizing = {};
+        Map<String, _Change> indirectResizing = {};
 
-        for (var sideItem in _sideItems) {
+        for (var sideItem in lSideItems) {
           var res = sideItem.tryDecrementOrMoveTo(direction);
 
           if (res == null) {
-            _indirectResizing.forEach((key, value) {
+            indirectResizing.forEach((key, value) {
               _layoutController._layouts![key]?._backResize(value);
               _layoutController._layouts![key]?.save();
             });
-            _indirectResizing.clear();
+            indirectResizing.clear();
             break;
           }
-          _indirectResizing[sideItem.id] = res;
+          indirectResizing[sideItem.id] = res;
         }
 
-        if (_indirectResizing.isEmpty) return null;
+        if (indirectResizing.isEmpty) return null;
 
-        _indirectResizing.forEach((key, value) {
+        indirectResizing.forEach((key, value) {
           onChange(key);
           _layoutController._layouts![key]?.save();
         });
@@ -573,29 +573,29 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
               width < _layoutController.slotCount) {
             _startX = startX - 1;
             _width = width + 1;
-            result = _Resize(resize, indirectResizes: _indirectResizing);
+            result = _Resize(resize, indirectResizes: indirectResizing);
           }
         } else if (direction == AxisDirection.right) {
           if ((maxWidth == null || width < maxWidth!) &&
               width < _layoutController.slotCount) {
             _width = width + 1;
-            result = _Resize(resize, indirectResizes: _indirectResizing);
+            result = _Resize(resize, indirectResizes: indirectResizing);
           }
         } else if (direction == AxisDirection.up) {
           if ((maxHeight == null || height < maxHeight!)) {
             _startY = startY - 1;
             _height = height + 1;
-            result = _Resize(resize, indirectResizes: _indirectResizing);
+            result = _Resize(resize, indirectResizes: indirectResizing);
           }
         } else {
           if (maxHeight == null || height < maxHeight!) {
             _height = height + 1;
-            result = _Resize(resize, indirectResizes: _indirectResizing);
+            result = _Resize(resize, indirectResizes: indirectResizing);
           }
         }
 
         if (result == null) {
-          _indirectResizing.forEach((key, value) {
+          indirectResizing.forEach((key, value) {
             onChange(key);
             _layoutController._layouts![key]?._backResize(value);
             _layoutController._layouts![key]?.save();
@@ -693,7 +693,7 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
             minHeight: minHeight));
 
     if (nLayout != null) {
-      var _c = o.startX != nLayout.startX ||
+      var c = o.startX != nLayout.startX ||
           o.startY != nLayout.startY ||
           o.width != nLayout.width ||
           o.height != nLayout.height;
@@ -713,13 +713,13 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
       }
 
       save();
-      if (!_c) {
+      if (!c) {
         _change = false;
       }
       _onTransformProcess = false;
 
       return _ResizeMoveResult()
-        ..isChanged = _c
+        ..isChanged = c
         ..startDifference = dif;
     } else {
       _layoutController._indexItem(
@@ -757,10 +757,10 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
 
     var slotIndex = _layoutController.getIndex([newStartX, newStartY]);
 
-    List<int> _tryingTo = <int>[];
+    List<int> tryingTo = <int>[];
 
     if (slotIndex != _exTrying) {
-      _tryingTo.addAll(<int>[
+      tryingTo.addAll(<int>[
         /// current
         slotIndex,
 
@@ -799,7 +799,7 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
       _exTrying = slotIndex;
     }
 
-    for (var trying in _tryingTo) {
+    for (var trying in tryingTo) {
       var coordinate = _layoutController.getIndexCoordinate(trying);
       var res = _tryTransformFor(coordinate[0], coordinate[1], newTransform);
       if (res != null) {

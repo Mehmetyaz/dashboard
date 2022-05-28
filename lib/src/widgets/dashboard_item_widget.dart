@@ -81,35 +81,35 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
   void _hover(PointerHoverEvent hover) {
     var x = hover.localPosition.dx;
     var y = hover.localPosition.dy;
-    MouseCursor _cursor;
+    MouseCursor cursor;
     var r = onRightSide(x);
     var l = onLeftSide(x);
     var t = onTopSide(y);
     var b = onBottomSide(y);
     if (r) {
       if (b) {
-        _cursor = SystemMouseCursors.resizeUpLeftDownRight;
+        cursor = SystemMouseCursors.resizeUpLeftDownRight;
       } else if (t) {
-        _cursor = SystemMouseCursors.resizeUpRightDownLeft;
+        cursor = SystemMouseCursors.resizeUpRightDownLeft;
       } else {
-        _cursor = SystemMouseCursors.resizeLeftRight;
+        cursor = SystemMouseCursors.resizeLeftRight;
       }
     } else if (l) {
       if (b) {
-        _cursor = SystemMouseCursors.resizeUpRightDownLeft;
+        cursor = SystemMouseCursors.resizeUpRightDownLeft;
       } else if (t) {
-        _cursor = SystemMouseCursors.resizeUpLeftDownRight;
+        cursor = SystemMouseCursors.resizeUpLeftDownRight;
       } else {
-        _cursor = SystemMouseCursors.resizeLeftRight;
+        cursor = SystemMouseCursors.resizeLeftRight;
       }
     } else if (b || t) {
-      _cursor = SystemMouseCursors.resizeUpDown;
+      cursor = SystemMouseCursors.resizeUpDown;
     } else {
-      _cursor = SystemMouseCursors.move;
+      cursor = SystemMouseCursors.move;
     }
-    if (_cursor != cursor) {
+    if (cursor != cursor) {
       setState(() {
-        cursor = _cursor;
+        cursor = cursor;
       });
     }
   }

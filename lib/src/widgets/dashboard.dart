@@ -184,7 +184,7 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   final ItemStyle itemStyle;
 
   @override
-  _DashboardState<T> createState() => _DashboardState<T>();
+  State<Dashboard<T>> createState() => _DashboardState<T>();
 }
 
 class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
@@ -388,7 +388,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           scrollBehavior: widget.scrollBehavior,
           viewportBuilder: (c, o) {
             if (!_reloading) _setNewOffset(o, constrains);
-            SchedulerBinding.instance?.addPostFrameCallback((timeStamp) {
+            SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
               _stateKey.currentState?._listenOffset(o);
             });
             _building = false;
