@@ -107,9 +107,9 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
     } else {
       cursor = SystemMouseCursors.move;
     }
-    if (cursor != cursor) {
+    if (this.cursor != cursor) {
       setState(() {
-        cursor = cursor;
+        this.cursor = cursor;
       });
     }
   }
