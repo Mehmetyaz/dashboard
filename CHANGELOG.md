@@ -1,3 +1,8 @@
+## 0.0.2+4
+
+* Cursor don't show on desktop fixed.
+
+
 ## 0.0.2+3
 
 * Switched to dart sdk 2.17.0

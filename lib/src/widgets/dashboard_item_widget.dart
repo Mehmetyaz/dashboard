@@ -1,5 +1,25 @@
 part of dashboard;
 
+class DashboardItemWidget<T extends DashboardItem> extends InheritedWidget {
+  const DashboardItemWidget(
+      {required this.item, required super.child, super.key});
+
+  final DashboardItem item;
+
+  static DashboardItemWidget<T> of<T extends DashboardItem>(
+      BuildContext context) {
+    final DashboardItemWidget? result =
+        context.dependOnInheritedWidgetOfExactType<DashboardItemWidget>();
+    assert(result != null, 'No FrogColor found in context');
+    return result! as DashboardItemWidget<T>;
+  }
+
+  @override
+  bool updateShouldNotify(covariant DashboardItemWidget oldWidget) {
+    return oldWidget.item.identifier != item.identifier;
+  }
+}
+
 class _DashboardItemWidget extends StatefulWidget {
   const _DashboardItemWidget(
       {required Key key,
@@ -130,7 +150,6 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
 
   _ItemCurrentLayout get l => widget.itemCurrentLayout;
 
-  //late BoxConstraints c;
 
   double get slotEdge => widget.layoutController.slotEdge;
 
@@ -182,15 +201,12 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
       if (widget.layoutController.absorbPointer) {
         result = AbsorbPointer(child: result);
       }
-
-      if (kIsWeb) {
-        result = MouseRegion(
-          cursor: cursor,
-          onHover: _hover,
-          onExit: _exit,
-          child: result,
-        );
-      }
+      result = MouseRegion(
+        cursor: cursor,
+        onHover: _hover,
+        onExit: _exit,
+        child: result,
+      );
     }
 
     var currentEdit = widget.layoutController.editSession?.editing.id ==

@@ -113,17 +113,19 @@ class _DashboardStackState<T extends DashboardItem>
 
     _widgetsMap[id] = [
       l,
-      Material(
-        elevation: widget.itemStyle.elevation ?? 0.0,
-        type: widget.itemStyle.type ?? MaterialType.card,
-        shape: widget.itemStyle.shape,
-        color: widget.itemStyle.color,
-        clipBehavior: widget.itemStyle.clipBehavior ?? Clip.none,
-        animationDuration:
-            widget.itemStyle.animationDuration ?? kThemeChangeDuration,
-        child: widget.itemBuilder(i),
-        //shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
+      DashboardItemWidget(
+          item: i,
+          child: Material(
+            elevation: widget.itemStyle.elevation ?? 0.0,
+            type: widget.itemStyle.type ?? MaterialType.card,
+            shape: widget.itemStyle.shape,
+            color: widget.itemStyle.color,
+            clipBehavior: widget.itemStyle.clipBehavior ?? Clip.none,
+            animationDuration:
+                widget.itemStyle.animationDuration ?? kThemeChangeDuration,
+            child: widget.itemBuilder(i),
+            //shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          )),
       id,
     ];
 

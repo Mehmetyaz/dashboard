@@ -791,10 +791,9 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
 
   void _setSizes(BoxConstraints constrains, double vertical) {
     verticalSlotEdge = vertical;
-    slotEdge = (_axis == Axis.vertical
-            ? constrains.maxWidth
-            : constrains.maxHeight) /
-        slotCount;
+    slotEdge =
+        (_axis == Axis.vertical ? constrains.maxWidth : constrains.maxHeight) /
+            slotCount;
   }
 
   late bool animateEverytime;
