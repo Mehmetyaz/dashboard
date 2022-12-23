@@ -26,30 +26,31 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   /// A list of widget arranged with hand or initially.
   Dashboard(
       {Key? key,
-      required this.itemBuilder,
-      required this.dashboardItemController,
-      this.slotCount = 8,
-      this.scrollController,
-      this.physics,
-      this.dragStartBehavior,
-      this.scrollBehavior,
-      this.cacheExtend = 500,
-      this.verticalSpace = 8,
-      this.horizontalSpace = 8,
-      this.padding = const EdgeInsets.all(0),
-      this.shrinkToPlace = true,
-      this.slideToTop = true,
-      this.slotAspectRatio,
-      this.slotHeight,
-      EditModeSettings? editModeSettings,
-      this.textDirection = TextDirection.ltr,
-      this.errorPlaceholder,
-      this.loadingPlaceholder,
-      this.absorbPointer = true,
-      this.animateEverytime = true,
-      this.itemStyle = const ItemStyle()})
+        required this.itemBuilder,
+        required this.dashboardItemController,
+        this.slotCount = 8,
+        this.scrollController,
+        this.physics,
+        this.dragStartBehavior,
+        this.scrollBehavior,
+        this.cacheExtend = 500,
+        this.verticalSpace = 8,
+        this.horizontalSpace = 8,
+        this.padding = const EdgeInsets.all(0),
+        this.shrinkToPlace = true,
+        this.slideToTop = true,
+        this.slotAspectRatio,
+        this.slotHeight,
+        EditModeSettings? editModeSettings,
+        this.textDirection = TextDirection.ltr,
+        this.errorPlaceholder,
+        this.loadingPlaceholder,
+        this.emptyPlaceholder,
+        this.absorbPointer = true,
+        this.animateEverytime = true,
+        this.itemStyle = const ItemStyle()})
       : assert((slotHeight == null && slotAspectRatio == null) ||
-            !(slotHeight != null && slotAspectRatio != null)),
+      !(slotHeight != null && slotAspectRatio != null)),
         editModeSettings = editModeSettings ?? EditModeSettings(),
         super(key: key);
 
@@ -112,6 +113,12 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   ///
   /// Default [loadingPlaceholder] is a centered circular process indicator.
   final Widget? loadingPlaceholder;
+
+  /// If the function don't have any data then it should display something
+  /// In empty data, [Dashboard] shows [emptyPlaceholder].
+  ///
+  /// Default [emptyPlaceholder] is a sizedBox means just empty space.
+  final Widget? emptyPlaceholder;
 
   /// If the [dashboardItemController] uses a [DashboardItemStorageDelegate],
   /// the loading of the items initially is done with a FutureOr function.
@@ -305,7 +312,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   ///
   final GlobalKey<_DashboardStackState<T>> _stateKey =
-      GlobalKey<_DashboardStackState<T>>();
+  GlobalKey<_DashboardStackState<T>>();
 
   bool scrollable = true;
 
@@ -364,7 +371,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
         if (_snap!.connectionState == ConnectionState.none) {
           _building = false;
           return widget.errorPlaceholder
-                  ?.call(_snap!.error!, _snap!.stackTrace!) ??
+              ?.call(_snap!.error!, _snap!.stackTrace!) ??
               const SizedBox();
         } else if (_snap!.connectionState == ConnectionState.waiting ||
             _reloading) {
@@ -376,6 +383,9 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
               );
         }
       }
+      if (widget.dashboardItemController._items.isEmpty) {
+        return widget.emptyPlaceholder ?? const SizedBox();
+      }
 
       return Scrollable(
           physics: scrollable
@@ -384,7 +394,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           controller: widget.scrollController,
           semanticChildCount: widget.dashboardItemController._items.length,
           dragStartBehavior:
-              widget.dragStartBehavior ?? DragStartBehavior.start,
+          widget.dragStartBehavior ?? DragStartBehavior.start,
           scrollBehavior: widget.scrollBehavior,
           viewportBuilder: (c, o) {
             if (!_reloading) _setNewOffset(o, constrains);
@@ -417,8 +427,8 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 class _ItemCurrentPositionTween extends Tween<_ItemCurrentPosition> {
   _ItemCurrentPositionTween(
       {required _ItemCurrentPosition begin,
-      required _ItemCurrentPosition end,
-      required this.onlyDimensions})
+        required _ItemCurrentPosition end,
+        required this.onlyDimensions})
       : super(begin: begin, end: end);
 
   bool onlyDimensions;
