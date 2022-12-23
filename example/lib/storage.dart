@@ -379,6 +379,8 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   @override
   FutureOr<void> onItemsUpdated(
       List<ColoredDashboardItem> items, int slotCount) async {
+    _setLocal();
+
     for (var item in items) {
       _localItems?[slotCount]?[item.identifier] = item;
     }
@@ -392,6 +394,7 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   @override
   FutureOr<void> onItemsAdded(
       List<ColoredDashboardItem> items, int slotCount) async {
+    _setLocal();
     for (var s in _slotCounts) {
       for (var i in items) {
         _localItems![s]?[i.identifier] = i;
@@ -407,6 +410,7 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
   @override
   FutureOr<void> onItemsDeleted(
       List<ColoredDashboardItem> items, int slotCount) async {
+    _setLocal();
     for (var s in _slotCounts) {
       for (var i in items) {
         _localItems![s]?.remove(i.identifier);
@@ -426,6 +430,15 @@ class MyItemStorage extends DashboardItemStorageDelegate<ColoredDashboardItem> {
     }
     _localItems = null;
     await _preferences.setBool("init", false);
+  }
+
+  _setLocal() {
+    _localItems ??= {
+      for (var s in _slotCounts)
+        s: _default[s]!
+            .asMap()
+            .map((key, value) => MapEntry(value.identifier, value))
+    };
   }
 
   @override

@@ -12,8 +12,7 @@ class EditModeSettings {
     this.longPressEnabled = true,
     this.panEnabled = true,
     this.backgroundStyle = const EditModeBackgroundStyle(),
-    //this.foregroundStyle = const EditModeForegroundStyle(),
-    this.curve = Curves.easeInOut,
+    this.curve = Curves.easeOut,
     Duration? duration,
     //this.paintItemForeground = true,
     this.shrinkOnMove = true,
@@ -47,5 +46,5 @@ class EditModeSettings {
 
   /// Background style
   final EditModeBackgroundStyle backgroundStyle;
-  //final EditModeForegroundStyle foregroundStyle;
+//final EditModeForegroundStyle foregroundStyle;
 }

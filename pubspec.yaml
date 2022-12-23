@@ -1,7 +1,7 @@
 name: dashboard
-description: Dynamic dashboard widget that allows your users to create their own layouts. Rezise, move, indirect resize/move, auto
+description: Dynamic dashboard widget that allows your users to create their own layouts. Resize, move, indirect resize/move, auto
   re-layout are supported.
-version: 0.0.2+4
+version: 0.0.3+1
 homepage: https://github.com/Mehmetyaz/dashboard
 repository: https://github.com/Mehmetyaz/dashboard
 

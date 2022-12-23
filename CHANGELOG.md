@@ -1,7 +1,16 @@
+## 0.0.3+1
+
+* Fixed issue : ``At initial start or refresh dashboard not scrollable``
+* Empty placeholder customizable for empty dashboard
+* Added ``mountToTop`` parameter to DashboardItemController.add and addAll method. (if false controller trying to add item to given position)
+
+## 0.0.2+5
+
+* Mouse cursor bug fix
+
 ## 0.0.2+4
 
 * Cursor don't show on desktop fixed.
-
 
 ## 0.0.2+3
 

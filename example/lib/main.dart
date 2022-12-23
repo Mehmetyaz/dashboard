@@ -212,7 +212,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 editModeSettings: EditModeSettings(
                     paintBackgroundLines: true,
                     resizeCursorSide: 15,
-                    curve: Curves.easeInOutCirc,
+                    curve: Curves.easeOut,
                     duration: const Duration(milliseconds: 300),
                     backgroundStyle: const EditModeBackgroundStyle(
                         lineColor: Colors.black38,
@@ -287,15 +287,19 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         });
 
     if (res != null) {
-      itemController.add(ColoredDashboardItem(
-          color: res[6],
-          width: res[0],
-          height: res[1],
-          identifier: (Random().nextInt(100000) + 4).toString(),
-          minWidth: res[2],
-          minHeight: res[3],
-          maxWidth: res[4] == 0 ? null : res[4],
-          maxHeight: res[5] == 0 ? null : res[5]));
+      itemController.add(
+          ColoredDashboardItem(
+              color: res[6],
+              width: res[0],
+              height: res[1],
+              startX: 1,
+              startY: 3,
+              identifier: (Random().nextInt(100000) + 4).toString(),
+              minWidth: res[2],
+              minHeight: res[3],
+              maxWidth: res[4] == 0 ? null : res[4],
+              maxHeight: res[5] == 0 ? null : res[5]),
+          mountToTop: false);
     }
   }
 }

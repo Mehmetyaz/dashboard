@@ -10,7 +10,7 @@ class DashboardItemWidget<T extends DashboardItem> extends InheritedWidget {
       BuildContext context) {
     final DashboardItemWidget? result =
         context.dependOnInheritedWidgetOfExactType<DashboardItemWidget>();
-    assert(result != null, 'No FrogColor found in context');
+    assert(result != null, 'No DashboardItemWidget found in context');
     return result! as DashboardItemWidget<T>;
   }
 
@@ -149,7 +149,6 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
   double startScrollOffset = 0;
 
   _ItemCurrentLayout get l => widget.itemCurrentLayout;
-
 
   double get slotEdge => widget.layoutController.slotEdge;
 

@@ -67,10 +67,10 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
   /// [Dashboard.shrinkToPlace] is true, it is tried to be placed by shrinking.
   /// In this case, if there is more than one possibility, it is placed in
   /// the largest form.
-  void add(T item) {
+  void add(T item, {bool mountToTop = true}) {
     if (_isAttached) {
       _items[item.identifier] = item;
-      _layoutController!.add(item);
+      _layoutController!.add(item, mountToTop);
       itemStorageDelegate?._onItemsAdded(
           [_getItemWithLayout(item.identifier)], _layoutController!.slotCount);
     } else {
@@ -91,7 +91,7 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
   /// [Dashboard.shrinkToPlace] is true, it is tried to be placed by shrinking.
   /// In this case, if there is more than one possibility, it is placed in
   /// the largest form.
-  void addAll(List<T> items) {
+  void addAll(List<T> items, {bool mountToTop = true}) {
     if (_isAttached) {
       _items.addAll(
           items.asMap().map((key, value) => MapEntry(value.identifier, value)));
@@ -211,7 +211,6 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
 // void slideToTopAll() {
 //   return _layoutController!._slideToTopAll();
 // }
-
 }
 
 ///
@@ -341,16 +340,42 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
     notifyListeners();
   }
 
-  void add(DashboardItem item) {
+  void add(DashboardItem item, [bool mountToTop = true]) {
     _layouts![item.identifier] = _ItemCurrentLayout(item.layoutData);
-    mountToTop(item.identifier);
+    this.mountToTop(
+        item.identifier,
+        mountToTop
+            ? 0
+            : getIndex(
+                [_adjustToPosition(item.layoutData), item.layoutData.startY]));
     notifyListeners();
   }
 
-  void addAll(List<DashboardItem> items) {
+  int _adjustToPosition(ItemLayout layout) {
+    int start;
+    if (layout.startX + layout.width > slotCount) {
+      start = slotCount - layout.width;
+    } else {
+      start = layout.startX;
+    }
+    return start;
+  }
+
+  void addAll(List<DashboardItem> items, {bool mountToTop = true}) {
     for (var item in items) {
       _layouts![item.identifier] = _ItemCurrentLayout(item.layoutData);
-      mountToTop(item.identifier);
+
+      int startX;
+
+      if (mountToTop) {
+        startX = 0;
+      } else {
+        startX = _adjustToPosition(item.layoutData);
+      }
+
+      int startY = item.layoutData.startY;
+
+      this.mountToTop(item.identifier, getIndex([startX, startY]));
     }
     notifyListeners();
   }
@@ -624,13 +649,13 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   }
 
   ///
-  bool mountToTop(String id) {
+  bool mountToTop(String id, [int start = 0]) {
     try {
       var itemCurrent = _layouts![id]!;
 
       _removeFromIndexes(itemCurrent, id);
 
-      var i = 0;
+      var i = start;
       while (true) {
         var nLayout = tryMount(i, itemCurrent.origin);
         if (nLayout != null) {
@@ -836,11 +861,6 @@ class _OverflowPossibility extends Comparable<_OverflowPossibility> {
   @override
   int compareTo(_OverflowPossibility other) {
     return sq.compareTo(other.sq);
-  }
-
-  @override
-  String toString() {
-    return super.toString();
   }
 }
 
