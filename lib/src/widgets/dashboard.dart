@@ -26,31 +26,31 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   /// A list of widget arranged with hand or initially.
   Dashboard(
       {Key? key,
-      required this.itemBuilder,
-      required this.dashboardItemController,
-      this.slotCount = 8,
-      this.scrollController,
-      this.physics,
-      this.dragStartBehavior,
-      this.scrollBehavior,
-      this.cacheExtend = 500,
-      this.verticalSpace = 8,
-      this.horizontalSpace = 8,
-      this.padding = const EdgeInsets.all(0),
-      this.shrinkToPlace = true,
-      this.slideToTop = true,
-      this.slotAspectRatio,
-      this.slotHeight,
-      EditModeSettings? editModeSettings,
-      this.textDirection = TextDirection.ltr,
-      this.errorPlaceholder,
-      this.loadingPlaceholder,
-      this.emptyPlaceholder,
-      this.absorbPointer = true,
-      this.animateEverytime = true,
-      this.itemStyle = const ItemStyle()})
+        required this.itemBuilder,
+        required this.dashboardItemController,
+        this.slotCount = 8,
+        this.scrollController,
+        this.physics,
+        this.dragStartBehavior,
+        this.scrollBehavior,
+        this.cacheExtend = 500,
+        this.verticalSpace = 8,
+        this.horizontalSpace = 8,
+        this.padding = const EdgeInsets.all(0),
+        this.shrinkToPlace = true,
+        this.slideToTop = true,
+        this.slotAspectRatio,
+        this.slotHeight,
+        EditModeSettings? editModeSettings,
+        this.textDirection = TextDirection.ltr,
+        this.errorPlaceholder,
+        this.loadingPlaceholder,
+        this.emptyPlaceholder,
+        this.absorbPointer = true,
+        this.animateEverytime = true,
+        this.itemStyle = const ItemStyle()})
       : assert((slotHeight == null && slotAspectRatio == null) ||
-            !(slotHeight != null && slotAspectRatio != null)),
+      !(slotHeight != null && slotAspectRatio != null)),
         editModeSettings = editModeSettings ?? EditModeSettings(),
         super(key: key);
 
@@ -324,10 +324,10 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   ///
   final GlobalKey<_DashboardStackState<T>> _stateKey =
-      GlobalKey<_DashboardStackState<T>>();
+  GlobalKey<_DashboardStackState<T>>();
 
   final GlobalKey<ScrollableState> _scrollableKey =
-      GlobalKey<ScrollableState>();
+  GlobalKey<ScrollableState>();
 
   bool scrollable = true;
 
@@ -386,7 +386,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
         if (_snap!.connectionState == ConnectionState.none) {
           _building = false;
           return widget.errorPlaceholder
-                  ?.call(_snap!.error!, _snap!.stackTrace!) ??
+              ?.call(_snap!.error!, _snap!.stackTrace!) ??
               const SizedBox();
         } else if (_snap!.connectionState == ConnectionState.waiting ||
             _reloading) {
@@ -399,52 +399,56 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
         }
       }
       if (widget.dashboardItemController._items.isEmpty) {
-        return widget.emptyPlaceholder ?? const SizedBox();
+        return widget.dashboardItemController.isEditing ? dashboardWidget(constrains) : widget.emptyPlaceholder ?? const SizedBox();
       }
 
-      return Scrollable(
-          physics: scrollable
-              ? widget.physics
-              : const NeverScrollableScrollPhysics(),
-          key: _scrollableKey,
-          controller: widget.scrollController,
-          semanticChildCount: widget.dashboardItemController._items.length,
-          dragStartBehavior:
-              widget.dragStartBehavior ?? DragStartBehavior.start,
-          scrollBehavior: widget.scrollBehavior,
-          viewportBuilder: (c, o) {
-            if (!_reloading) _setNewOffset(o, constrains);
-            WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-              _stateKey.currentState?._listenOffset(o);
-            });
-            _building = false;
-            return _DashboardStack<T>(
-                itemStyle: widget.itemStyle,
-                shouldCalculateNewDimensions: () {
-                  _setNewOffset(o, constrains);
-                },
-                onScrollStateChange: (st) {
-                  setState(() {
-                    scrollable = st;
-                  });
-                },
-                maxScrollOffset: _maxExtend,
-                editModeSettings: widget.editModeSettings,
-                cacheExtend: widget.cacheExtend,
-                key: _stateKey,
-                itemBuilder: widget.itemBuilder,
-                dashboardController: _layoutController,
-                offset: offset);
-          });
+      return dashboardWidget(constrains);
     });
+  }
+
+  Widget dashboardWidget(BoxConstraints constrains) {
+    return Scrollable(
+        physics: scrollable
+            ? widget.physics
+            : const NeverScrollableScrollPhysics(),
+        key: _scrollableKey,
+        controller: widget.scrollController,
+        semanticChildCount: widget.dashboardItemController._items.length,
+        dragStartBehavior:
+        widget.dragStartBehavior ?? DragStartBehavior.start,
+        scrollBehavior: widget.scrollBehavior,
+        viewportBuilder: (c, o) {
+          if (!_reloading) _setNewOffset(o, constrains);
+          WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+            _stateKey.currentState?._listenOffset(o);
+          });
+          _building = false;
+          return _DashboardStack<T>(
+              itemStyle: widget.itemStyle,
+              shouldCalculateNewDimensions: () {
+                _setNewOffset(o, constrains);
+              },
+              onScrollStateChange: (st) {
+                setState(() {
+                  scrollable = st;
+                });
+              },
+              maxScrollOffset: _maxExtend,
+              editModeSettings: widget.editModeSettings,
+              cacheExtend: widget.cacheExtend,
+              key: _stateKey,
+              itemBuilder: widget.itemBuilder,
+              dashboardController: _layoutController,
+              offset: offset);
+        });
   }
 }
 
 class _ItemCurrentPositionTween extends Tween<_ItemCurrentPosition> {
   _ItemCurrentPositionTween(
       {required _ItemCurrentPosition begin,
-      required _ItemCurrentPosition end,
-      required this.onlyDimensions})
+        required _ItemCurrentPosition end,
+        required this.onlyDimensions})
       : super(begin: begin, end: end);
 
   bool onlyDimensions;

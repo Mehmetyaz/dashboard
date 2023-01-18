@@ -199,6 +199,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 animateEverytime: true,
                 dashboardItemController: itemController,
                 slotCount: slot!,
+                emptyPlaceholder: const CircularProgressIndicator(),
                 errorPlaceholder: (e, s) {
                   return Text("$e , $s");
                 },
