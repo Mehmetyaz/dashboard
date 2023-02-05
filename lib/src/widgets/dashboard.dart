@@ -399,44 +399,48 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
         }
       }
       if (widget.dashboardItemController._items.isEmpty) {
-        return widget.emptyPlaceholder ?? const SizedBox();
+        return widget.dashboardItemController.isEditing ? dashboardWidget(constrains) : widget.emptyPlaceholder ?? const SizedBox();
       }
 
-      return Scrollable(
-          physics: scrollable
-              ? widget.physics
-              : const NeverScrollableScrollPhysics(),
-          key: _scrollableKey,
-          controller: widget.scrollController,
-          semanticChildCount: widget.dashboardItemController._items.length,
-          dragStartBehavior:
-              widget.dragStartBehavior ?? DragStartBehavior.start,
-          scrollBehavior: widget.scrollBehavior,
-          viewportBuilder: (c, o) {
-            if (!_reloading) _setNewOffset(o, constrains);
-            WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-              _stateKey.currentState?._listenOffset(o);
-            });
-            _building = false;
-            return _DashboardStack<T>(
-                itemStyle: widget.itemStyle,
-                shouldCalculateNewDimensions: () {
-                  _setNewOffset(o, constrains);
-                },
-                onScrollStateChange: (st) {
-                  setState(() {
-                    scrollable = st;
-                  });
-                },
-                maxScrollOffset: _maxExtend,
-                editModeSettings: widget.editModeSettings,
-                cacheExtend: widget.cacheExtend,
-                key: _stateKey,
-                itemBuilder: widget.itemBuilder,
-                dashboardController: _layoutController,
-                offset: offset);
-          });
+      return dashboardWidget(constrains);
     });
+  }
+
+  Widget dashboardWidget(BoxConstraints constrains) {
+    return Scrollable(
+        physics: scrollable
+            ? widget.physics
+            : const NeverScrollableScrollPhysics(),
+        key: _scrollableKey,
+        controller: widget.scrollController,
+        semanticChildCount: widget.dashboardItemController._items.length,
+        dragStartBehavior:
+        widget.dragStartBehavior ?? DragStartBehavior.start,
+        scrollBehavior: widget.scrollBehavior,
+        viewportBuilder: (c, o) {
+          if (!_reloading) _setNewOffset(o, constrains);
+          WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+            _stateKey.currentState?._listenOffset(o);
+          });
+          _building = false;
+          return _DashboardStack<T>(
+              itemStyle: widget.itemStyle,
+              shouldCalculateNewDimensions: () {
+                _setNewOffset(o, constrains);
+              },
+              onScrollStateChange: (st) {
+                setState(() {
+                  scrollable = st;
+                });
+              },
+              maxScrollOffset: _maxExtend,
+              editModeSettings: widget.editModeSettings,
+              cacheExtend: widget.cacheExtend,
+              key: _stateKey,
+              itemBuilder: widget.itemBuilder,
+              dashboardController: _layoutController,
+              offset: offset);
+        });
   }
 }
 
