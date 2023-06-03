@@ -199,7 +199,14 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
   ///
   @override
   void initState() {
-    _layoutController = _DashboardLayoutController<T>();
+    _layoutController = _DashboardLayoutController<T>(
+        itemController: widget.dashboardItemController,
+        animateEverytime: widget.animateEverytime,
+        axis: Axis.vertical,
+        shrinkOnMove: widget.editModeSettings.shrinkOnMove,
+        shrinkToPlace: widget.shrinkToPlace,
+        slideToTop: widget.slideToTop,
+        slotCount: widget.slotCount);
     _layoutController.addListener(() {
       setState(() {});
     });
@@ -399,7 +406,9 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
         }
       }
       if (widget.dashboardItemController._items.isEmpty) {
-        return widget.dashboardItemController.isEditing ? dashboardWidget(constrains) : widget.emptyPlaceholder ?? const SizedBox();
+        return widget.dashboardItemController.isEditing
+            ? dashboardWidget(constrains)
+            : widget.emptyPlaceholder ?? const SizedBox();
       }
 
       return dashboardWidget(constrains);
@@ -408,14 +417,12 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   Widget dashboardWidget(BoxConstraints constrains) {
     return Scrollable(
-        physics: scrollable
-            ? widget.physics
-            : const NeverScrollableScrollPhysics(),
+        physics:
+            scrollable ? widget.physics : const NeverScrollableScrollPhysics(),
         key: _scrollableKey,
         controller: widget.scrollController,
         semanticChildCount: widget.dashboardItemController._items.length,
-        dragStartBehavior:
-        widget.dragStartBehavior ?? DragStartBehavior.start,
+        dragStartBehavior: widget.dragStartBehavior ?? DragStartBehavior.start,
         scrollBehavior: widget.scrollBehavior,
         viewportBuilder: (c, o) {
           if (!_reloading) _setNewOffset(o, constrains);

@@ -216,7 +216,17 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
 ///
 class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   ///
-  _DashboardLayoutController();
+  _DashboardLayoutController({
+    required this.itemController,
+    required this.slotCount,
+    required this.slideToTop,
+    required this.shrinkToPlace,
+    required this.animateEverytime,
+    required this.shrinkOnMove,
+    required Axis axis,
+  }) {
+    _axis = axis;
+  }
 
   ///
   late DashboardItemController<T> itemController;
@@ -341,6 +351,17 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   }
 
   void add(DashboardItem item, [bool mountToTop = true]) {
+    if (_isAttached == false) {
+      attach(
+        axis: Axis.vertical,
+        itemController: itemController,
+        slotCount: slotCount,
+        slideToTop: slideToTop,
+        shrinkToPlace: shrinkToPlace,
+        animateEverytime: animateEverytime,
+        shrinkOnMove: shrinkOnMove,
+      );
+    }
     _layouts![item.identifier] = _ItemCurrentLayout(item.layoutData);
     this.mountToTop(
         item.identifier,
@@ -839,10 +860,10 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
     this.slotCount = slotCount;
     this.animateEverytime = animateEverytime;
     _axis = axis;
-    _isAttached = true;
 
     _layouts = itemController._items.map((key, value) =>
         MapEntry(value.identifier, _ItemCurrentLayout(value.layoutData)));
+    _isAttached = true;
     mountItems();
     _rebuild = true;
   }
