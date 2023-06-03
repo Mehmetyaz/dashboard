@@ -383,6 +383,17 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   }
 
   void addAll(List<DashboardItem> items, {bool mountToTop = true}) {
+    if (_isAttached == false) {
+      attach(
+        axis: Axis.vertical,
+        itemController: itemController,
+        slotCount: slotCount,
+        slideToTop: slideToTop,
+        shrinkToPlace: shrinkToPlace,
+        animateEverytime: animateEverytime,
+        shrinkOnMove: shrinkOnMove,
+      );
+    }
     for (var item in items) {
       _layouts![item.identifier] = _ItemCurrentLayout(item.layoutData);
 
