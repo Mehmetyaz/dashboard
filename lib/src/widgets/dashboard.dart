@@ -49,11 +49,19 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
       this.absorbPointer = true,
       this.animateEverytime = true,
       this.itemStyle = const ItemStyle(),
-      this.scrollToAdded = true})
+      this.scrollToAdded = true,
+      this.slotBackgroundBuilder})
       : assert((slotHeight == null && slotAspectRatio == null) ||
             !(slotHeight != null && slotAspectRatio != null)),
         editModeSettings = editModeSettings ?? EditModeSettings(),
         super(key: key);
+
+  /// If [slotBackgroundBuilder] is not null, the background of the slots
+  /// is drawn with the  [SlotBackgroundBuilder.build] method.
+  ///
+  /// The [SlotBackgroundBuilder.build] method is called for each slot that
+  /// is visible on the screen and in the cache area.
+  final SlotBackgroundBuilder<T>? slotBackgroundBuilder;
 
   /// If [scrollToAdded] is true, when a new item is added, the viewport
   /// scrolls to the added item.
@@ -438,23 +446,25 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           });
           _building = false;
           return _DashboardStack<T>(
-              itemStyle: widget.itemStyle,
-              shouldCalculateNewDimensions: () {
-                _setNewOffset(o, constrains);
-              },
-              onScrollStateChange: (st) {
-                setState(() {
-                  scrollable = st;
-                });
-              },
-              emptyPlaceholder: widget.emptyPlaceholder,
-              maxScrollOffset: _maxExtend,
-              editModeSettings: widget.editModeSettings,
-              cacheExtend: widget.cacheExtend,
-              key: _stateKey,
-              itemBuilder: widget.itemBuilder,
-              dashboardController: _layoutController,
-              offset: offset);
+            itemStyle: widget.itemStyle,
+            shouldCalculateNewDimensions: () {
+              _setNewOffset(o, constrains);
+            },
+            onScrollStateChange: (st) {
+              setState(() {
+                scrollable = st;
+              });
+            },
+            emptyPlaceholder: widget.emptyPlaceholder,
+            maxScrollOffset: _maxExtend,
+            editModeSettings: widget.editModeSettings,
+            cacheExtend: widget.cacheExtend,
+            key: _stateKey,
+            itemBuilder: widget.itemBuilder,
+            dashboardController: _layoutController,
+            offset: offset,
+            slotBackground: widget.slotBackgroundBuilder,
+          );
         });
   }
 }

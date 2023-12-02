@@ -109,6 +109,7 @@ class _AnimatedBackgroundPainterState extends State<_AnimatedBackgroundPainter>
                   slotCount: widget.layoutController.slotCount,
                   style: widget.editModeSettings.backgroundStyle,
                   slotEdge: widget.layoutController.slotEdge,
+                  lines: widget.editModeSettings.paintBackgroundLines,
                   offset: widget.offset.pixels,
                   viewportDelegate: widget.layoutController._viewportDelegate),
               isComplex: true,
@@ -123,6 +124,7 @@ class _AnimatedBackgroundPainterState extends State<_AnimatedBackgroundPainter>
       return CustomPaint(
         painter: _EditModeBackgroundPainter(
             fillPosition: fillRect,
+            lines: widget.editModeSettings.paintBackgroundLines,
             verticalSlotEdge: widget.layoutController.verticalSlotEdge,
             slotCount: widget.layoutController.slotCount,
             style: widget.editModeSettings.backgroundStyle,

@@ -899,11 +899,11 @@ class _EditSession {
     }
   }
 
-  void _addSwap(
+  /*void _addSwap(
       String directId, String indirectId, _Swap direct, _Swap indirect) {
     _swapChanges[directId] = direct;
     _swapChanges[indirectId] = indirect;
-  }
+  }*/
 
   ///
   final _ItemCurrentLayout editing;
