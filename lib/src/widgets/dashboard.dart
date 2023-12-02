@@ -48,11 +48,16 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
       this.emptyPlaceholder,
       this.absorbPointer = true,
       this.animateEverytime = true,
-      this.itemStyle = const ItemStyle()})
+      this.itemStyle = const ItemStyle(),
+      this.scrollToAdded = true})
       : assert((slotHeight == null && slotAspectRatio == null) ||
             !(slotHeight != null && slotAspectRatio != null)),
         editModeSettings = editModeSettings ?? EditModeSettings(),
         super(key: key);
+
+  /// If [scrollToAdded] is true, when a new item is added, the viewport
+  /// scrolls to the added item.
+  final bool scrollToAdded;
 
   /// [slotAspectRatio] determines slots height. Slot width determined by
   /// viewport width and [slotCount].
@@ -264,25 +269,29 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
             _layoutController.shrinkToPlace != widget.shrinkToPlace) &&
         !_reloading) {
       _layoutController.attach(
+          viewportOffset: o,
           shrinkOnMove: widget.editModeSettings.shrinkOnMove,
           animateEverytime: widget.animateEverytime,
           slideToTop: widget.slideToTop,
           shrinkToPlace: widget.shrinkToPlace,
           axis: Axis.vertical,
           itemController: widget.dashboardItemController,
-          slotCount: widget.slotCount);
+          slotCount: widget.slotCount,
+          scrollToAdded: widget.scrollToAdded);
       _setOnNextFrame();
     }
 
     if (!_layoutController._isAttached) {
       _layoutController.attach(
+          viewportOffset: o,
           shrinkOnMove: widget.editModeSettings.shrinkOnMove,
           animateEverytime: widget.animateEverytime,
           slideToTop: widget.slideToTop,
           shrinkToPlace: widget.shrinkToPlace,
           axis: Axis.vertical,
           itemController: widget.dashboardItemController,
-          slotCount: widget.slotCount);
+          slotCount: widget.slotCount,
+          scrollToAdded: widget.scrollToAdded);
       _setOnNextFrame();
     }
 
@@ -315,8 +324,13 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
     _maxExtend -= constraints.maxHeight;
 
-    offset.applyContentDimensions(
-        0, _maxExtend.clamp(0, double.maxFinite) + widget.padding.vertical);
+    if (_maxExtend < 0) {
+      _maxExtend = widget.padding.vertical - _maxExtend.abs();
+    } else {
+      _maxExtend += widget.padding.vertical;
+    }
+
+    offset.applyContentDimensions(0, _maxExtend.clamp(0, double.maxFinite));
   }
 
   ///
@@ -356,26 +370,30 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           if (_reloadFor == widget.slotCount) {
             _reloading = false;
             _layoutController.attach(
+                viewportOffset: offset,
                 shrinkOnMove: widget.editModeSettings.shrinkOnMove,
                 animateEverytime: widget.animateEverytime,
                 slideToTop: widget.slideToTop,
                 shrinkToPlace: widget.shrinkToPlace,
                 axis: Axis.vertical,
                 itemController: widget.dashboardItemController,
-                slotCount: widget.slotCount);
+                slotCount: widget.slotCount,
+                scrollToAdded: widget.scrollToAdded);
           }
         });
       } else {
         if (_reloadFor == widget.slotCount) {
           _reloading = false;
           _layoutController.attach(
+              viewportOffset: offset,
               shrinkOnMove: widget.editModeSettings.shrinkOnMove,
               animateEverytime: widget.animateEverytime,
               slideToTop: widget.slideToTop,
               shrinkToPlace: widget.shrinkToPlace,
               axis: Axis.vertical,
               itemController: widget.dashboardItemController,
-              slotCount: widget.slotCount);
+              slotCount: widget.slotCount,
+              scrollToAdded: widget.scrollToAdded);
         }
       }
     }
@@ -398,9 +416,6 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
               );
         }
       }
-      if (widget.dashboardItemController._items.isEmpty) {
-        return widget.dashboardItemController.isEditing ? dashboardWidget(constrains) : widget.emptyPlaceholder ?? const SizedBox();
-      }
 
       return dashboardWidget(constrains);
     });
@@ -408,16 +423,15 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   Widget dashboardWidget(BoxConstraints constrains) {
     return Scrollable(
-        physics: scrollable
-            ? widget.physics
-            : const NeverScrollableScrollPhysics(),
+        physics:
+            scrollable ? widget.physics : const NeverScrollableScrollPhysics(),
         key: _scrollableKey,
         controller: widget.scrollController,
         semanticChildCount: widget.dashboardItemController._items.length,
-        dragStartBehavior:
-        widget.dragStartBehavior ?? DragStartBehavior.start,
+        dragStartBehavior: widget.dragStartBehavior ?? DragStartBehavior.start,
         scrollBehavior: widget.scrollBehavior,
         viewportBuilder: (c, o) {
+          _layoutController._viewportOffset = o;
           if (!_reloading) _setNewOffset(o, constrains);
           WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
             _stateKey.currentState?._listenOffset(o);
@@ -433,6 +447,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
                   scrollable = st;
                 });
               },
+              emptyPlaceholder: widget.emptyPlaceholder,
               maxScrollOffset: _maxExtend,
               editModeSettings: widget.editModeSettings,
               cacheExtend: widget.cacheExtend,

@@ -311,23 +311,40 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
           top += o.dy;
         }
 
+        var wi = cp.width;
+
+        if (!widget.editModeSettings.draggableOutside) {
+          final constraints =
+              widget.layoutController._viewportDelegate.constraints;
+          final maxW = constraints.maxWidth;
+
+          if (left < 0) {
+            left = 0;
+          } else if (left + wi > maxW) {
+            left = maxW - wi;
+          }
+
+          if (!widget.editModeSettings.autoScroll) {
+            if (o != null) {
+              final maxH = constraints.maxHeight;
+              final hi = cp.height;
+              final scrollOffset = widget.offset.pixels;
+
+              if (top < scrollOffset) {
+                top = scrollOffset;
+              } else if (top + hi > maxH + scrollOffset) {
+                top = maxH + scrollOffset - hi;
+              }
+            }
+          }
+        }
+
         return Positioned(
             left: left,
             top: top - widget.offset.pixels,
             width: cp.width,
             height: cp.height,
-            child: /*widget.layoutController.isEditing &&
-                    widget.editModeSettings.paintItemForeground
-                ? CustomPaint(
-                    child: w!,
-                    foregroundPainter: _EditModeItemPainter(
-                        style: widget.editModeSettings.foregroundStyle,
-                        tolerance: widget.editModeSettings.resizeCursorSide,
-                        constraints: BoxConstraints(
-                            maxHeight: cp.height, maxWidth: cp.width)),
-                  )
-                :*/
-                w!);
+            child: w!);
       },
     );
   }

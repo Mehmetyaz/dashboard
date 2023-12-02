@@ -114,6 +114,17 @@ class _Moving extends _Change {
   }
 }
 
+class _Swap extends _Change {
+  final ItemLayout origin;
+
+  _Swap({required this.origin}) : super(AxisDirection.down, false);
+
+  @override
+  ItemLayout back(ItemLayout layout) {
+    return origin;
+  }
+}
+
 class _Resize {
   _Resize(this.resize, {this.indirectResizes});
 
@@ -363,18 +374,6 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
     return result;
   }
 
-  // _saveToEditSession(){
-  //   _layoutController.editSession!._changes[id] = ItemLayout(
-  //       startX: startX,
-  //       startY: startY,
-  //       width: width,
-  //       height: height,
-  //       maxHeight: maxHeight,
-  //       maxWidth: maxWidth,
-  //       minWidth: minWidth,
-  //       minHeight: minHeight);
-  // }
-
   _ItemCurrentPosition _saveResizeResult(_Resize res,
       _ItemCurrentPosition itemPositionDifference, _ResizeMoveResult result) {
     save();
@@ -507,6 +506,13 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
     //     startX: startX, startY: startY, width: width, height: height);
 
     return;
+  }
+
+  void _backSwap(_Swap swap) {
+    _startX = swap.origin.startX;
+    _startY = swap.origin.startY;
+    _width = swap.origin.width;
+    _height = swap.origin.height;
   }
 
   _Resize? tryResize(_Resizing? resize, void Function(String id) onChange) {
@@ -738,24 +744,72 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
   }
 
   int? _exTrying = -1;
+  bool _swapping = false;
+
+  void _removeSwap() {
+    if (_swapping) {
+      _layoutController.editSession!._swapChanges.forEach((key, value) {
+        _layoutController._layouts![key]!._backSwap(value);
+      });
+      _swapping = false;
+    }
+  }
 
   _ResizeMoveResult? _transformUpdate(
-      Offset offsetDifference, double scrollDifference) {
+      Offset offsetDifference, double scrollDifference, Offset holdOffset) {
     if (_onTransformProcess) return null;
     _onTransformProcess = true;
+
     var newTransform = offsetDifference + Offset(0, scrollDifference);
+
+    var on = newTransform + holdOffset;
+
+    var holdX = ((on.dx / _slotEdge).floor() + origin.startX)
+        .clamp(0, _layoutController.slotCount - 1);
+
+    var holdY =
+        ((on.dy / _verticalSlotEdge).floor() + origin.startY).clamp(0, 1 << 32);
 
     var newStartX = ((newTransform.dx / _slotEdge).floor() + origin.startX)
         .clamp(0, _layoutController.slotCount - 1);
     var newStartY =
         ((newTransform.dy / _verticalSlotEdge).floor() + origin.startY)
-            .clamp(0, 9999999999999);
+            .clamp(0, 1 << 32);
 
     var haveLeft = newStartX > 0;
     var haveRight = newStartX < _layoutController.slotCount - 1;
     var haveTop = newStartY > 0;
 
     var slotIndex = _layoutController.getIndex([newStartX, newStartY]);
+
+    final holdItem = _layoutController
+        ._indexesTree[_layoutController.getIndex([holdX, holdY])];
+
+    if (holdItem != null && holdItem != id) {
+      final holdingItem = _layoutController._layouts![holdItem];
+
+      if (holdingItem != null) {
+        var hO = Offset(holdingItem.startX * _slotEdge,
+            (holdingItem.startY * _verticalSlotEdge));
+
+        var offsetFromHold =
+            Offset(startX * _slotEdge, (startY * _verticalSlotEdge)) + on - hO;
+
+        var holdWH = Offset(holdingItem.width * _slotEdge,
+            (holdingItem.height * _verticalSlotEdge));
+
+        if (offsetFromHold.dx > 20 && offsetFromHold.dy > 20) {
+          final notRight = offsetFromHold.dx < holdWH.dx - 20;
+          final notBottom = offsetFromHold.dy < holdWH.dy - 20;
+
+          if (notRight && notBottom) {
+            // TODO: Try swap
+          }
+        }
+      }
+    }
+
+    _removeSwap();
 
     List<int> tryingTo = <int>[];
 
@@ -806,61 +860,6 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
         return res;
       }
     }
-
-    // if ((newStartX != startX || newStartY != startY)) {
-    //   //   _layoutController._removeFromIndexes(
-    //   //       ItemLayout(
-    //   //           startX: startX, startY: startY, width: width, height: height),
-    //   //       id);
-    //   //
-    //   //   var nLayout = _layoutController.tryMount(
-    //   //       _layoutController.getIndex([newStartX, newStartY]),
-    //   //       ItemLayout(
-    //   //           startX: newStartX,
-    //   //           startY: newStartY,
-    //   //           width: _originSize![0],
-    //   //           height: _originSize![1],
-    //   //           maxHeight: maxHeight,
-    //   //           maxWidth: maxWidth,
-    //   //           minWidth: minWidth,
-    //   //           minHeight: minHeight));
-    //   //
-    //   //   if (nLayout != null) {
-    //   //     var xDif = nLayout.startX - startX;
-    //   //     var yDif = nLayout.startY - startY;
-    //   //     _startX = nLayout.startX;
-    //   //     _startY = nLayout.startY;
-    //   //     _width = nLayout.width;
-    //   //     _height = nLayout.height;
-    //   //     var dif = Offset(xDif * _slotEdge, yDif * _verticalSlotEdge);
-    //   //
-    //   //     if (_transform == null) {
-    //   //       _transform = ValueNotifier(newTransform - dif);
-    //   //       notifyListeners();
-    //   //     } else {
-    //   //       _transform!.value = newTransform - dif;
-    //   //     }
-    //   //
-    //   //     save();
-    //   //     _onTransformProcess = false;
-    //   //
-    //   //     return ResizeMoveResult()
-    //   //       ..isChanged = true
-    //   //       ..startDifference = dif;
-    //   //   } else {
-    //   //     _layoutController._indexItem(
-    //   //         ItemLayout(
-    //   //             startX: startX,
-    //   //             startY: startY,
-    //   //             width: width,
-    //   //             height: height,
-    //   //             minHeight: minHeight,
-    //   //             minWidth: minWidth,
-    //   //             maxWidth: maxWidth,
-    //   //             maxHeight: maxHeight),
-    //   //         id);
-    //   //   }
-    // }
 
     if (_transform == null) {
       _transform = ValueNotifier(newTransform);

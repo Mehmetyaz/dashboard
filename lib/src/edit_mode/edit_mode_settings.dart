@@ -14,9 +14,21 @@ class EditModeSettings {
     this.backgroundStyle = const EditModeBackgroundStyle(),
     this.curve = Curves.easeOut,
     Duration? duration,
-    //this.paintItemForeground = true,
     this.shrinkOnMove = true,
+    this.draggableOutside = true,
+    this.autoScroll = true,
   }) : duration = duration ?? kThemeAnimationDuration;
+
+  /// If [draggableOutside] is true, items can be dragged outside the viewport.
+  /// Else items can't be dragged outside the viewport.
+  ///
+  /// This only effects horizontal drag. To disable vertical drag set
+  /// [autoScroll] to false also.
+  final bool draggableOutside;
+
+  /// If [autoScroll] is true, viewport will scroll automatically when item is
+  /// dragged outside the viewport vertically.
+  final bool autoScroll;
 
   /// Animation duration
   final Duration duration;
@@ -46,5 +58,4 @@ class EditModeSettings {
 
   /// Background style
   final EditModeBackgroundStyle backgroundStyle;
-//final EditModeForegroundStyle foregroundStyle;
 }
