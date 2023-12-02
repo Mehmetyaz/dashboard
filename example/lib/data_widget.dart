@@ -199,7 +199,7 @@ class InfoAdvice extends StatelessWidget {
               child: Container(
                 alignment: Alignment.center,
                 child: DataTable(
-                    dataRowHeight: 25,
+
                     headingRowHeight: 25,
                     border: const TableBorder(
                         horizontalInside: BorderSide(color: Colors.white)),
@@ -235,10 +235,10 @@ class DefaultAdvice extends StatelessWidget {
         color: yellow,
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
+          children: [
             Icon(
               Icons.refresh,
               size: 30,
@@ -266,10 +266,10 @@ class ClearAdvice extends StatelessWidget {
         color: green,
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
+          children: [
             Icon(
               Icons.delete,
               size: 30,
@@ -294,10 +294,10 @@ class AddAdvice extends StatelessWidget {
         color: blue,
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Column(
+        child: const Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
+          children: [
             Icon(
               Icons.add,
               size: 30,
@@ -322,22 +322,22 @@ class TransformAdvice extends StatelessWidget {
         color: red,
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Column(
+        child: const Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               "Users can move widgets.",
               style: TextStyle(color: Colors.white, fontSize: 13),
               textAlign: TextAlign.center,
             ),
-            const Text(
+            Text(
               "To try moving, hold (or long press) the widget and move.",
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white, fontSize: 13),
             ),
             Row(
-              children: const [
+              children: [
                 Expanded(
                   child: Text(
                     "While moving, it shrinks if possible according to the "
@@ -400,32 +400,32 @@ class BasicDescription extends StatelessWidget {
         color: yellow,
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        child: Column(
+        child: const Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            const AutoSizeText(
+            AutoSizeText(
                 "Each widget on the screen is called \"DashboardItem\"",
                 maxLines: 4,
                 style: TextStyle(color: Colors.white, fontSize: 13),
                 textAlign: TextAlign.center),
-            const AutoSizeText("Each has a location and dimensions by slots.",
+            AutoSizeText("Each has a location and dimensions by slots.",
                 maxLines: 3,
                 style: TextStyle(color: Colors.white, fontSize: 13),
                 textAlign: TextAlign.center),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: AutoSizeText(
                       "You can switch to edit mode to see these slots.",
                       maxLines: 4,
                       style: TextStyle(color: Colors.white, fontSize: 13),
                       textAlign: TextAlign.center),
                 ),
-                const SizedBox(
+                SizedBox(
                   width: 8,
                 ),
                 Column(
-                  children: const [
+                  children: [
                     Text("Tap: ",
                         style: TextStyle(color: Colors.white, fontSize: 10)),
                     Icon(Icons.edit, color: Colors.white),
@@ -456,11 +456,11 @@ class AdviceResize extends StatelessWidget {
               width: 1,
               color: Colors.white,
             ),
-            Expanded(
+            const Expanded(
                 child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
+              children: [
                 AutoSizeText("Users can resize widgets.",
                     maxLines: 2,
                     style: TextStyle(color: Colors.white, fontSize: 13),

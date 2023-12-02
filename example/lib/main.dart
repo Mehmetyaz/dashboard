@@ -112,13 +112,19 @@ class _DashboardWidgetState extends State<DashboardWidget> {
   final ScrollController scrollController = ScrollController();
 
   ///
-  late var itemController =
+  late var _itemController =
       DashboardItemController<ColoredDashboardItem>.withDelegate(
           itemStorageDelegate: storage);
 
   bool refreshing = false;
 
   var storage = MyItemStorage();
+
+  //var dummyItemController =
+  //    DashboardItemController<ColoredDashboardItem>(items: []);
+
+  DashboardItemController<ColoredDashboardItem> get itemController =>
+      _itemController;
 
   int? slot;
 
@@ -156,7 +162,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                   refreshing = true;
                 });
                 storage = MyItemStorage();
-                itemController = DashboardItemController.withDelegate(
+                _itemController = DashboardItemController.withDelegate(
                     itemStorageDelegate: storage);
                 Future.delayed(const Duration(milliseconds: 150)).then((value) {
                   setState(() {
@@ -202,6 +208,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 errorPlaceholder: (e, s) {
                   return Text("$e , $s");
                 },
+                emptyPlaceholder: const Center(child: Text("Empty")),
                 itemStyle: ItemStyle(
                     color: Colors.transparent,
                     clipBehavior: Clip.antiAliasWithSaveLayer,
@@ -210,7 +217,9 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         borderRadius: BorderRadius.circular(15))),
                 physics: const RangeMaintainingScrollPhysics(),
                 editModeSettings: EditModeSettings(
+                    draggableOutside: false,
                     paintBackgroundLines: true,
+                    autoScroll: true,
                     resizeCursorSide: 15,
                     curve: Curves.easeOut,
                     duration: const Duration(milliseconds: 300),
@@ -228,51 +237,53 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                     );
                   }
 
-                  return Stack(
-                    children: [
-                      Container(
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                            color: item.color,
-                            borderRadius: BorderRadius.circular(10)),
-                        child: SizedBox(
-                            width: double.infinity,
-                            height: double.infinity,
-                            child: Text(
-                              "ID: ${item.identifier}\n${[
-                                "x: ${layout.startX}",
-                                "y: ${layout.startY}",
-                                "w: ${layout.width}",
-                                "h: ${layout.height}",
-                                if (layout.minWidth != 1)
-                                  "minW: ${layout.minWidth}",
-                                if (layout.minHeight != 1)
-                                  "minH: ${layout.minHeight}",
-                                if (layout.maxWidth != null)
-                                  "maxW: ${layout.maxWidth}",
-                                if (layout.maxHeight != null)
-                                  "maxH : ${layout.maxHeight}"
-                              ].join("\n")}",
-                              style: const TextStyle(color: Colors.white),
-                            )),
-                      ),
-                      if (itemController.isEditing)
-                        Positioned(
-                            right: 5,
-                            top: 5,
-                            child: InkResponse(
-                                radius: 20,
-                                onTap: () {
-                                  itemController.delete(item.identifier);
-                                },
-                                child: const Icon(
-                                  Icons.clear,
-                                  color: Colors.white,
-                                  size: 20,
-                                )))
-                    ],
-                  );
+                  return LayoutBuilder(builder: (_, c) {
+                    return Stack(
+                      children: [
+                        Container(
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                              color: item.color,
+                              borderRadius: BorderRadius.circular(10)),
+                          child: SizedBox(
+                              width: double.infinity,
+                              height: double.infinity,
+                              child: Text(
+                                "ID: ${item.identifier}\n${[
+                                  "x: ${layout.startX}",
+                                  "y: ${layout.startY}",
+                                  "w: ${layout.width}",
+                                  "h: ${layout.height}",
+                                  if (layout.minWidth != 1)
+                                    "minW: ${layout.minWidth}",
+                                  if (layout.minHeight != 1)
+                                    "minH: ${layout.minHeight}",
+                                  if (layout.maxWidth != null)
+                                    "maxW: ${layout.maxWidth}",
+                                  if (layout.maxHeight != null)
+                                    "maxH : ${layout.maxHeight}"
+                                ].join("\n")}",
+                                style: const TextStyle(color: Colors.white),
+                              )),
+                        ),
+                        if (itemController.isEditing)
+                          Positioned(
+                              right: 5,
+                              top: 5,
+                              child: InkResponse(
+                                  radius: 20,
+                                  onTap: () {
+                                    itemController.delete(item.identifier);
+                                  },
+                                  child: const Icon(
+                                    Icons.clear,
+                                    color: Colors.white,
+                                    size: 20,
+                                  )))
+                      ],
+                    );
+                  });
                 },
               ),
       ),
@@ -292,8 +303,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
               color: res[6],
               width: res[0],
               height: res[1],
-              startX: 1,
-              startY: 3,
+              startX: 0,
+              startY: 0,
               identifier: (Random().nextInt(100000) + 4).toString(),
               minWidth: res[2],
               minHeight: res[3],

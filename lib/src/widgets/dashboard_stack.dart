@@ -11,9 +11,11 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
       required this.maxScrollOffset,
       required this.onScrollStateChange,
       required this.shouldCalculateNewDimensions,
-      required this.itemStyle})
+      required this.itemStyle,
+      required this.emptyPlaceholder})
       : super(key: key);
 
+  final Widget? emptyPlaceholder;
   final ViewportOffset offset;
   final _DashboardLayoutController<T> dashboardController;
   final double cacheExtend;
@@ -244,6 +246,14 @@ class _DashboardStackState<T extends DashboardItem>
             .map((e) {
           return buildPositioned(e.value);
         }).toList(),
+        if (widget.dashboardController.itemController._items.isEmpty &&
+            !widget.dashboardController._isEditing)
+          Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              top: 0,
+              child: widget.emptyPlaceholder ?? Container()),
         ...?(widget.dashboardController.editSession == null
             ? null
             : [
@@ -294,6 +304,11 @@ class _DashboardStackState<T extends DashboardItem>
   }
 
   void setSpeed(Offset global) {
+    if (!widget.editModeSettings.autoScroll) {
+      speed = 0;
+      return;
+    }
+
     var last = min((height - global.dy), global.dy);
     var m = global.dy < 50 ? -1 : 1;
     if (last < 10) {
@@ -330,6 +345,8 @@ class _DashboardStackState<T extends DashboardItem>
   }
 
   double speed = 0;
+
+  Offset holdOffset = Offset.zero;
 
   void _onMoveStart(Offset local) {
     var holdGlobal = Offset(local.dx - viewportDelegate.padding.left,
@@ -386,6 +403,8 @@ class _DashboardStackState<T extends DashboardItem>
       _moveStartOffset = local;
       _startScrollPixels = pixels;
       widget.dashboardController.startEdit(e, _holdDirections == null);
+
+      holdOffset = holdGlobal - Offset(itemGlobal.x, itemGlobal.y);
 
       var l = widget.dashboardController._layouts![e];
       widget.dashboardController.editSession!.editing._originSize = [
@@ -446,12 +465,15 @@ class _DashboardStackState<T extends DashboardItem>
         }
       } else {
         var resizeMoveResult = _editing!._transformUpdate(
-            local - _moveStartOffset!, pixels - _startScrollPixels!);
+            local - _moveStartOffset!,
+            pixels - _startScrollPixels!,
+            holdOffset);
         if (resizeMoveResult != null && resizeMoveResult.isChanged) {
           setState(() {
             _moveStartOffset =
                 _moveStartOffset! + resizeMoveResult.startDifference;
             _widgetsMap.remove(_editing!.id);
+
             if (_editing!._endIndex > (e)) {
               widget.shouldCalculateNewDimensions();
             }
