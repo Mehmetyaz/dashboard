@@ -98,6 +98,22 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
+class MySlotBackground extends SlotBackgroundBuilder<ColoredDashboardItem> {
+  @override
+  Widget? buildBackground(BuildContext context, ColoredDashboardItem? item,
+      int x, int y, bool editing) {
+    if (item != null) {
+      return Container(
+        decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(10)),
+      );
+    }
+
+    return null;
+  }
+}
+
 class DashboardWidget extends StatefulWidget {
   ///
   const DashboardWidget({Key? key}) : super(key: key);
@@ -198,6 +214,15 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 shrinkToPlace: false,
                 slideToTop: true,
                 absorbPointer: false,
+                slotBackgroundBuilder: SlotBackgroundBuilder.withFunction(
+                    (context, item, x, y, editing) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black12, width: 0.5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  );
+                }),
                 padding: const EdgeInsets.all(8),
                 horizontalSpace: 8,
                 verticalSpace: 8,
@@ -218,7 +243,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 physics: const RangeMaintainingScrollPhysics(),
                 editModeSettings: EditModeSettings(
                     draggableOutside: false,
-                    paintBackgroundLines: true,
+                    paintBackgroundLines: false,
                     autoScroll: true,
                     resizeCursorSide: 15,
                     curve: Curves.easeOut,
@@ -226,8 +251,10 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                     backgroundStyle: const EditModeBackgroundStyle(
                         lineColor: Colors.black38,
                         lineWidth: 0.5,
-                        dualLineHorizontal: true,
-                        dualLineVertical: true)),
+                        dualLineHorizontal: false,
+                        dualLineVertical: false
+                    )
+                ),
                 itemBuilder: (ColoredDashboardItem item) {
                   var layout = item.layoutData;
 

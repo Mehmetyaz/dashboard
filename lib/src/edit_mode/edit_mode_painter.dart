@@ -8,9 +8,12 @@ class _EditModeBackgroundPainter extends CustomPainter {
       required this.slotCount,
       required this.viewportDelegate,
       this.fillPosition,
+      required this.lines,
       this.style = const EditModeBackgroundStyle()});
 
   _ViewportDelegate viewportDelegate;
+
+  final bool lines;
 
   Rect? fillPosition;
 
@@ -29,6 +32,10 @@ class _EditModeBackgroundPainter extends CustomPainter {
   EditModeBackgroundStyle style;
 
   void drawVerticalLines(Canvas canvas) {
+    if (!lines) {
+      return;
+    }
+
     var horizontalLinePaint = Paint()
       ..style = PaintingStyle.stroke
       ..color = style.lineColor
@@ -58,6 +65,10 @@ class _EditModeBackgroundPainter extends CustomPainter {
   }
 
   void drawHorizontals(Canvas canvas) {
+    if (!lines) {
+      return;
+    }
+
     var horizontalLinePaint = Paint()
       ..style = PaintingStyle.stroke
       ..color = style.lineColor
@@ -92,7 +103,34 @@ class _EditModeBackgroundPainter extends CustomPainter {
     drawVerticalLines(canvas);
     drawHorizontals(canvas);
     if (fillPosition != null) {
-      canvas.drawRect(fillPosition!, Paint()..color = style.fillColor);
+      var path = Path()
+        ..moveTo(fillPosition!.left + style.outherRadius, fillPosition!.top)
+        ..lineTo(fillPosition!.right - style.outherRadius, fillPosition!.top)
+        ..arcToPoint(
+            Offset(fillPosition!.right, fillPosition!.top + style.outherRadius),
+            radius: Radius.circular(style.outherRadius))
+        ..lineTo(fillPosition!.right, fillPosition!.bottom - style.outherRadius)
+        ..arcToPoint(
+            Offset(
+                fillPosition!.right - style.outherRadius, fillPosition!.bottom),
+            radius: Radius.circular(style.outherRadius))
+        ..lineTo(fillPosition!.left + style.outherRadius, fillPosition!.bottom)
+        ..arcToPoint(
+            Offset(
+                fillPosition!.left, fillPosition!.bottom - style.outherRadius),
+            radius: Radius.circular(style.outherRadius))
+        ..lineTo(fillPosition!.left, fillPosition!.top + style.outherRadius)
+        ..arcToPoint(
+            Offset(fillPosition!.left + style.outherRadius, fillPosition!.top),
+            radius: Radius.circular(style.outherRadius))
+        ..close();
+
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = style.fillColor,
+      );
     }
   }
 

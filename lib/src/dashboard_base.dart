@@ -17,6 +17,7 @@ part 'widgets/dashboard_stack.dart';
 
 part 'widgets/dashboard_item_widget.dart';
 part 'widgets/animated_background_painter.dart';
+part 'widgets/grid_builder.dart';
 
 part 'models/dashboard_item.dart';
 part 'models/viewport_settings.dart';

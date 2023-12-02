@@ -12,7 +12,8 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
       required this.onScrollStateChange,
       required this.shouldCalculateNewDimensions,
       required this.itemStyle,
-      required this.emptyPlaceholder})
+      required this.emptyPlaceholder,
+      required this.slotBackground})
       : super(key: key);
 
   final Widget? emptyPlaceholder;
@@ -20,6 +21,7 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
   final _DashboardLayoutController<T> dashboardController;
   final double cacheExtend;
   final EditModeSettings editModeSettings;
+  final SlotBackgroundBuilder<T>? slotBackground;
   final double maxScrollOffset;
   final void Function(bool scrollable) onScrollStateChange;
 
@@ -137,6 +139,43 @@ class _DashboardStackState<T extends DashboardItem>
 
   final Map<String, GlobalKey<_DashboardItemWidgetState>> _keys = {};
 
+  late int startIndex, endIndex;
+
+  List<Widget> _buildBackground() {
+    final res = <Widget>[];
+
+    int i = startIndex;
+
+    var l =
+        viewportDelegate.padding.left + (viewportDelegate.crossAxisSpace / 2);
+    var t = viewportDelegate.padding.top -
+        pixels +
+        (viewportDelegate.mainAxisSpace / 2);
+    var w = slotEdge - viewportDelegate.crossAxisSpace;
+    var h = verticalSlotEdge - viewportDelegate.mainAxisSpace;
+
+    while (i <= endIndex) {
+      var x = i % widget.dashboardController.slotCount;
+      var y = (i / widget.dashboardController.slotCount).floor();
+      widget.slotBackground!._itemController =
+          widget.dashboardController.itemController;
+      res.add(Positioned(
+        left: x * slotEdge + l,
+        top: y * verticalSlotEdge + t,
+        width: w,
+        height: h,
+        child: Builder(
+          builder: (c) {
+            return widget.slotBackground!._build(context, x, y);
+          },
+        ),
+      ));
+      i++;
+    }
+
+    return res;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.dashboardController._rebuild) {
@@ -148,11 +187,12 @@ class _DashboardStackState<T extends DashboardItem>
     verticalSlotEdge = widget.dashboardController.verticalSlotEdge;
     var startPixels = (viewportOffset.pixels) - widget.cacheExtend;
     var startY = (startPixels / verticalSlotEdge).floor();
-    var startIndex = widget.dashboardController.getIndex([0, startY]);
+
+    startIndex = widget.dashboardController.getIndex([0, startY]);
 
     var endPixels = viewportOffset.pixels + height + widget.cacheExtend;
     var endY = (endPixels / verticalSlotEdge).ceil();
-    var endIndex = widget.dashboardController
+    endIndex = widget.dashboardController
         .getIndex([widget.dashboardController.slotCount - 1, endY]);
 
     var needs = <String>[];
@@ -223,8 +263,8 @@ class _DashboardStackState<T extends DashboardItem>
     Widget result = Stack(
       clipBehavior: Clip.hardEdge,
       children: [
-        if (widget.editModeSettings.paintBackgroundLines &&
-            widget.dashboardController.isEditing)
+        if (widget.slotBackground != null) ..._buildBackground(),
+        if (widget.dashboardController.isEditing)
           Positioned(
             top: viewportDelegate.padding.top,
             left: viewportDelegate.padding.left,
