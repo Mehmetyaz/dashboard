@@ -303,44 +303,40 @@ class _DashboardStackState<T extends DashboardItem>
       ],
     );
 
-    final isOnPanUpdateEnabled = widget.editModeSettings.panEnabled &&
-        edit != null &&
-        edit.id.isNotEmpty;
-    final isOnLongPressUpdateEnabled =
-        widget.editModeSettings.longPressEnabled &&
-            edit != null &&
-            edit.id.isNotEmpty;
-
     if (widget.dashboardController.isEditing) {
       result = GestureDetector(
-        onPanStart: isOnPanUpdateEnabled
+        onPanStart: widget.editModeSettings.panEnabled
             ? (panStart) {
                 _onMoveStart(panStart.localPosition);
               }
             : null,
-        onPanUpdate: isOnPanUpdateEnabled
+        onPanUpdate: widget.editModeSettings.panEnabled &&
+                edit != null &&
+                edit.id.isNotEmpty
             ? (u) {
                 setSpeed(u.localPosition);
                 _onMoveUpdate(u.localPosition);
               }
             : null,
-        onPanEnd: isOnPanUpdateEnabled
+        onPanEnd: widget.editModeSettings.panEnabled
             ? (e) {
                 _onMoveEnd();
               }
             : null,
-        onLongPressStart: isOnLongPressUpdateEnabled
+        onLongPressStart: widget.editModeSettings.longPressEnabled
             ? (longPressStart) {
                 _onMoveStart(longPressStart.localPosition);
               }
             : null,
-        onLongPressMoveUpdate: isOnLongPressUpdateEnabled
+        onLongPressMoveUpdate: widget.editModeSettings.longPressEnabled &&
+                edit != null &&
+                edit.id.isNotEmpty
             ? (u) {
                 setSpeed(u.localPosition);
                 _onMoveUpdate(u.localPosition);
               }
             : null,
-        onLongPressEnd: isOnLongPressUpdateEnabled
+        onLongPressEnd: widget.editModeSettings.longPressEnabled
             ? (e) {
                 _onMoveEnd();
               }
