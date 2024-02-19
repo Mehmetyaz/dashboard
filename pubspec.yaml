@@ -1,7 +1,7 @@
 name: dashboard
 description: Dynamic dashboard widget that allows your users to create their own layouts. Resize, move, indirect resize/move, auto
   re-layout are supported.
-version: 0.0.4
+version: 0.0.5
 homepage: https://github.com/Mehmetyaz/dashboard
 repository: https://github.com/Mehmetyaz/dashboard
 
@@ -15,6 +15,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.1
+  flutter_lints: ^3.0.1
 
 flutter:
