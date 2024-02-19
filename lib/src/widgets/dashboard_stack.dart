@@ -369,7 +369,9 @@ class _DashboardStackState<T extends DashboardItem>
         if (speed != 0) {
           var n = pixels + speed;
 
-          viewportOffset.jumpTo(n.clamp(0.0, (1 << 31).toDouble()));
+          if (viewportOffset.hasPixels) {
+            viewportOffset.jumpTo(n.clamp(0.0, (1 << 31).toDouble()));
+          }
           scroll();
         }
       } catch (e) {

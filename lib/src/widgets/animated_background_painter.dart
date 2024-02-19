@@ -38,6 +38,12 @@ class _AnimatedBackgroundPainterState extends State<_AnimatedBackgroundPainter>
     super.initState();
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
   bool onAnimation = false;
 
   Rect? _last;
