@@ -30,7 +30,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // final ScrollController scrollController = ScrollController();
+  final ScrollController scrollController = ScrollController();
 
   late var _itemController =
       DashboardItemController<ColoredDashboardItem>.withDelegate(
@@ -116,6 +116,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: CircularProgressIndicator(),
               )
             : Dashboard<ColoredDashboardItem>(
+                scrollController: scrollController,
                 shrinkToPlace: false,
                 slideToTop: true,
                 absorbPointer: false,
