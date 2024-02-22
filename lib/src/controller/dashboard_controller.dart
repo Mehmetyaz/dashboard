@@ -106,7 +106,6 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
     } else {
       throw Exception("Not Attached");
     }
-    throw 0;
   }
 
   /// Delete an item from Dashboard.
