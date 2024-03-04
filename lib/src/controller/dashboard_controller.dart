@@ -99,7 +99,7 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
     if (_isAttached) {
       _items.addAll(
           items.asMap().map((key, value) => MapEntry(value.identifier, value)));
-      _layoutController!.addAll(items);
+      _layoutController!.addAll(items, mountToTop: mountToTop);
       itemStorageDelegate?._onItemsAdded(
           items.map((e) => _getItemWithLayout(e.identifier)).toList(),
           _layoutController!.slotCount);
