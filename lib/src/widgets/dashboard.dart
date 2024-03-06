@@ -1,4 +1,4 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 ///
 typedef DashboardItemBuilder<T extends DashboardItem> = Widget Function(T item);
@@ -24,37 +24,35 @@ typedef DashboardItemBuilder<T extends DashboardItem> = Widget Function(T item);
 /// This controller is also used to add/delete widget and handle layout changes.
 class Dashboard<T extends DashboardItem> extends StatefulWidget {
   /// A list of widget arranged with hand or initially.
-  Dashboard(
-      {Key? key,
-      required this.itemBuilder,
-      required this.dashboardItemController,
-      this.slotCount = 8,
-      this.scrollController,
-      this.physics,
-      this.dragStartBehavior,
-      this.scrollBehavior,
-      this.cacheExtend = 500,
-      this.verticalSpace = 8,
-      this.horizontalSpace = 8,
-      this.padding = const EdgeInsets.all(0),
-      this.shrinkToPlace = true,
-      this.slideToTop = true,
-      this.slotAspectRatio,
-      this.slotHeight,
-      EditModeSettings? editModeSettings,
-      this.textDirection = TextDirection.ltr,
-      this.errorPlaceholder,
-      this.loadingPlaceholder,
-      this.emptyPlaceholder,
-      this.absorbPointer = true,
-      this.animateEverytime = true,
-      this.itemStyle = const ItemStyle(),
-      this.scrollToAdded = true,
-      this.slotBackgroundBuilder})
+  Dashboard({super.key,
+    required this.itemBuilder,
+    required this.dashboardItemController,
+    this.slotCount = 8,
+    this.scrollController,
+    this.physics,
+    this.dragStartBehavior,
+    this.scrollBehavior,
+    this.cacheExtend = 500,
+    this.verticalSpace = 8,
+    this.horizontalSpace = 8,
+    this.padding = const EdgeInsets.all(0),
+    this.shrinkToPlace = true,
+    this.slideToTop = true,
+    this.slotAspectRatio,
+    this.slotHeight,
+    EditModeSettings? editModeSettings,
+    this.textDirection = TextDirection.ltr,
+    this.errorPlaceholder,
+    this.loadingPlaceholder,
+    this.emptyPlaceholder,
+    this.absorbPointer = true,
+    this.animateEverytime = true,
+    this.itemStyle = const ItemStyle(),
+    this.scrollToAdded = true,
+    this.slotBackgroundBuilder})
       : assert((slotHeight == null && slotAspectRatio == null) ||
-            !(slotHeight != null && slotAspectRatio != null)),
-        editModeSettings = editModeSettings ?? EditModeSettings(),
-        super(key: key);
+      !(slotHeight != null && slotAspectRatio != null)),
+        editModeSettings = editModeSettings ?? EditModeSettings();
 
   /// If [slotBackgroundBuilder] is not null, the background of the slots
   /// is drawn with the  [SlotBackgroundBuilder.build] method.
@@ -237,7 +235,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   bool get hasDimensions {
     final RenderBox? renderBox =
-        myWidgetKey.currentContext?.findRenderObject() as RenderBox?;
+    myWidgetKey.currentContext?.findRenderObject() as RenderBox?;
     // Checks if the renderBox is not null and has a non-zero size
     return renderBox != null && renderBox.hasSize;
   }
@@ -269,10 +267,9 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
   }
 
   ///
-  _setNewOffset(ViewportOffset o, BoxConstraints constraints) {
+  _setNewOffset(ViewportOffset o, BoxConstraints constraints, [bool i = true]) {
     /// check slot count
     /// check new constrains equal exists
-
     _layoutController.absorbPointer = widget.absorbPointer;
     _layoutController._viewportDelegate = _ViewportDelegate(
         constraints: constraints,
@@ -330,8 +327,15 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
     _offset = o;
 
-    offset.applyViewportDimension(
-        _layoutController._viewportDelegate.constraints.maxHeight);
+    if (i) {
+      offset.applyViewportDimension(
+          _layoutController._viewportDelegate.constraints.maxHeight);
+    }
+
+    if (!i) {
+      offset.applyContentDimensions(0, double.maxFinite);
+      return;
+    }
 
     var maxIndex = (_layoutController._endsTree.lastKey() ?? 0);
 
@@ -357,10 +361,10 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   ///
   final GlobalKey<_DashboardStackState<T>> _stateKey =
-      GlobalKey<_DashboardStackState<T>>();
+  GlobalKey<_DashboardStackState<T>>();
 
   final GlobalKey<ScrollableState> _scrollableKey =
-      GlobalKey<ScrollableState>();
+  GlobalKey<ScrollableState>();
 
   bool scrollable = true;
 
@@ -423,7 +427,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
         if (_snap!.connectionState == ConnectionState.none) {
           _building = false;
           return widget.errorPlaceholder
-                  ?.call(_snap!.error!, _snap!.stackTrace!) ??
+              ?.call(_snap!.error!, _snap!.stackTrace!) ??
               const SizedBox();
         } else if (_snap!.connectionState == ConnectionState.waiting ||
             _reloading) {
@@ -440,10 +444,12 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
     });
   }
 
+  bool _moving = false;
+
   Widget dashboardWidget(BoxConstraints constrains) {
     return Scrollable(
         physics:
-            scrollable ? widget.physics : const NeverScrollableScrollPhysics(),
+        scrollable ? widget.physics : const NeverScrollableScrollPhysics(),
         key: _scrollableKey,
         controller: widget.scrollController,
         semanticChildCount: widget.dashboardItemController._items.length,
@@ -459,11 +465,24 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           return _DashboardStack<T>(
             itemStyle: widget.itemStyle,
             shouldCalculateNewDimensions: () {
+              if (_moving) {
+                return;
+              }
               _setNewOffset(o, constrains);
             },
             onScrollStateChange: (st) {
-              setState(() {
-                scrollable = st;
+
+              SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+                _moving = !st;
+
+                setState(() {
+                  scrollable = st;
+                });
+
+                if (!_moving) {
+                  return;
+                }
+                _setNewOffset(o, constrains, _moving);
               });
             },
             emptyPlaceholder: widget.emptyPlaceholder,
@@ -481,10 +500,9 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 }
 
 class _ItemCurrentPositionTween extends Tween<_ItemCurrentPosition> {
-  _ItemCurrentPositionTween(
-      {required _ItemCurrentPosition begin,
-      required _ItemCurrentPosition end,
-      required this.onlyDimensions})
+  _ItemCurrentPositionTween({required _ItemCurrentPosition begin,
+    required _ItemCurrentPosition end,
+    required this.onlyDimensions})
       : super(begin: begin, end: end);
 
   bool onlyDimensions;

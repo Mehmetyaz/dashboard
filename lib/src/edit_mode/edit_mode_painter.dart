@@ -1,4 +1,4 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 class _EditModeBackgroundPainter extends CustomPainter {
   _EditModeBackgroundPainter(

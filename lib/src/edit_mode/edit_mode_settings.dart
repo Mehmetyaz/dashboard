@@ -1,4 +1,4 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 /// Edit mode settings.
 /// It contains parameters related to gesture, animations, resizing.

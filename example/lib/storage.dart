@@ -8,26 +8,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ColoredDashboardItem extends DashboardItem {
   ColoredDashboardItem(
       {this.color,
-      required int width,
-      required int height,
-      required String identifier,
+      required super.width,
+      required super.height,
+      required super.identifier,
       this.data,
-      int minWidth = 1,
-      int minHeight = 1,
-      int? maxHeight,
-      int? maxWidth,
-      int? startX,
-      int? startY})
-      : super(
-            startX: startX,
-            startY: startY,
-            width: width,
-            height: height,
-            identifier: identifier,
-            maxHeight: maxHeight,
-            maxWidth: maxWidth,
-            minWidth: minWidth,
-            minHeight: minHeight);
+      super.minWidth,
+      super.minHeight,
+      super.maxHeight,
+      super.maxWidth,
+      super.startX,
+      super.startY});
 
   ColoredDashboardItem.fromMap(Map<String, dynamic> map)
       : color = map["color"] != null ? Color(map["color"]) : null,

@@ -1,4 +1,4 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 /// Dashboard item layout changes stored/handled with the delegate. Keeps the
 /// layout in memory, fetches the layout when necessary. It can store different

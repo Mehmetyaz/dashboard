@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class AddDialog extends StatefulWidget {
-  const AddDialog({Key? key}) : super(key: key);
+  const AddDialog({super.key});
 
   @override
   State<AddDialog> createState() => _AddDialogState();

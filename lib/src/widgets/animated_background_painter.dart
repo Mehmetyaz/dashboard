@@ -1,12 +1,10 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 class _AnimatedBackgroundPainter extends StatefulWidget {
   const _AnimatedBackgroundPainter(
-      {Key? key,
-      required this.layoutController,
+      {required this.layoutController,
       required this.editModeSettings,
-      required this.offset})
-      : super(key: key);
+      required this.offset});
 
   final _DashboardLayoutController layoutController;
   final EditModeSettings editModeSettings;

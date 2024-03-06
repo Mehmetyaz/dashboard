@@ -1,4 +1,4 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 /// A dashboard consists of [DashboardItem]s.
 /// [DashboardItem] holds item identifier([identifier]) and [layoutData].

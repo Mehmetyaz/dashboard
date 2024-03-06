@@ -1,8 +1,8 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
   const _DashboardStack(
-      {Key? key,
+      {super.key,
       required this.editModeSettings,
       required this.offset,
       required this.dashboardController,
@@ -13,8 +13,7 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
       required this.shouldCalculateNewDimensions,
       required this.itemStyle,
       required this.emptyPlaceholder,
-      required this.slotBackground})
-      : super(key: key);
+      required this.slotBackground});
 
   final Widget? emptyPlaceholder;
   final ViewportOffset offset;
@@ -282,7 +281,7 @@ class _DashboardStackState<T extends DashboardItem>
                 widget.dashboardController.editSession?.editing.id)
             .map((e) {
           return buildPositioned(e.value);
-        }).toList(),
+        }),
         if (widget.dashboardController.itemController._items.isEmpty &&
             !widget.dashboardController._isEditing)
           Positioned(
@@ -370,7 +369,10 @@ class _DashboardStackState<T extends DashboardItem>
         if (speed != 0) {
           var n = pixels + speed;
 
+
           viewportOffset.jumpTo(n.clamp(0.0, (1 << 31).toDouble()));
+
+
           scroll();
         }
       } catch (e) {

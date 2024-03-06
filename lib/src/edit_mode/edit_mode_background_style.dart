@@ -1,4 +1,4 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 /// In edit mode, dashboard background are painted with lines and a rect if
 /// any items is editing.

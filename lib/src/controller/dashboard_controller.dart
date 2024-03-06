@@ -1,4 +1,6 @@
-part of dashboard;
+
+part of '../dashboard_base.dart';
+
 
 /// A controller for dashboard items.
 ///
@@ -335,7 +337,7 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   }
 
   void _scrollToY(int y, Duration duration, Curve curve) {
-    final lastY = _layouts![_endsTree.lastKey()];
+    final lastY = _layouts![_endsTree[_endsTree.lastKey()]];
 
     if (lastY != null) {
       final lastH = ((lastY.height + lastY.startY) * verticalSlotEdge) -

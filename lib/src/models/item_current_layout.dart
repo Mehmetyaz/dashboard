@@ -1,4 +1,4 @@
-part of dashboard;
+part of '../dashboard_base.dart';
 
 class _ItemCurrentPosition {
   _ItemCurrentPosition(
@@ -52,8 +52,7 @@ abstract class _Change {
 }
 
 class _Resizing extends _Change {
-  _Resizing(AxisDirection direction, bool increment)
-      : super(direction, increment);
+  _Resizing(super.direction, super.increment);
 
   @override
   String toString() {
@@ -82,8 +81,7 @@ class _Resizing extends _Change {
 }
 
 class _Moving extends _Change {
-  _Moving(AxisDirection direction, bool increment)
-      : super(direction, increment);
+  _Moving(super.direction, super.increment);
 
   @override
   String toString() {
