@@ -38,19 +38,15 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
 
 class _DashboardStackState<T extends DashboardItem>
     extends State<_DashboardStack<T>> {
-  ///
   ViewportOffset get viewportOffset => widget.offset;
 
   _ViewportDelegate get viewportDelegate =>
       widget.dashboardController._viewportDelegate;
 
-  ///
   double get pixels => viewportOffset.pixels;
 
-  ///
   double get width => viewportDelegate.resolvedConstrains.maxWidth;
 
-  ///
   double get height => viewportDelegate.resolvedConstrains.maxHeight;
 
   @override
@@ -240,6 +236,7 @@ class _DashboardStackState<T extends DashboardItem>
     }
 
     var needDelete = [...afterIt, ...beforeIt];
+
     var edit = widget.dashboardController.editSession?.editing;
 
     for (var n in needDelete) {
@@ -310,7 +307,9 @@ class _DashboardStackState<T extends DashboardItem>
                 _onMoveStart(panStart.localPosition);
               }
             : null,
-        onPanUpdate: widget.editModeSettings.panEnabled
+        onPanUpdate: widget.editModeSettings.panEnabled &&
+                edit != null &&
+                edit.id.isNotEmpty
             ? (u) {
                 setSpeed(u.localPosition);
                 _onMoveUpdate(u.localPosition);
@@ -326,7 +325,9 @@ class _DashboardStackState<T extends DashboardItem>
                 _onMoveStart(longPressStart.localPosition);
               }
             : null,
-        onLongPressMoveUpdate: widget.editModeSettings.longPressEnabled
+        onLongPressMoveUpdate: widget.editModeSettings.longPressEnabled &&
+                edit != null &&
+                edit.id.isNotEmpty
             ? (u) {
                 setSpeed(u.localPosition);
                 _onMoveUpdate(u.localPosition);
@@ -475,50 +476,51 @@ class _DashboardStackState<T extends DashboardItem>
       _holdDirections!.contains(direction);
 
   void _onMoveUpdate(Offset local) {
-    if (_editing != null) {
-      var e = widget.dashboardController._endsTree.lastKey() ?? 0;
+    if (_editing == null) {
+      return;
+    }
 
-      if (_editingResize) {
-        var scrollDifference = pixels - _startScrollPixels!;
-        var differences = <String>{};
-        var resizeMoveResult = _editing!._resizeMove(
-            holdDirections: _holdDirections!,
-            local: local,
-            onChange: (s) {
-              differences.add(s);
-            },
-            start: _moveStartOffset!,
-            scrollDifference: scrollDifference);
+    var e = widget.dashboardController._endsTree.lastKey() ?? 0;
 
-        if (resizeMoveResult.isChanged) {
-          setState(() {
-            _moveStartOffset =
-                _moveStartOffset! + resizeMoveResult.startDifference;
-            _widgetsMap.remove(_editing!.id);
-            for (var r in differences) {
-              _widgetsMap.remove(r);
-            }
-            if (_editing!._endIndex > (e)) {
-              widget.shouldCalculateNewDimensions();
-            }
-          });
-        }
-      } else {
-        var resizeMoveResult = _editing!._transformUpdate(
-            local - _moveStartOffset!,
-            pixels - _startScrollPixels!,
-            holdOffset);
-        if (resizeMoveResult != null && resizeMoveResult.isChanged) {
-          setState(() {
-            _moveStartOffset =
-                _moveStartOffset! + resizeMoveResult.startDifference;
-            _widgetsMap.remove(_editing!.id);
+    if (_editingResize) {
+      var scrollDifference = pixels - _startScrollPixels!;
+      var differences = <String>{};
+      var resizeMoveResult = _editing!._resizeMove(
+          holdDirections: _holdDirections!,
+          local: local,
+          onChange: (s) {
+            differences.add(s);
+          },
+          start: _moveStartOffset!,
+          scrollDifference: scrollDifference);
 
-            if (_editing!._endIndex > (e)) {
-              widget.shouldCalculateNewDimensions();
-            }
-          });
-        }
+      if (resizeMoveResult.isChanged) {
+        setState(() {
+          _moveStartOffset =
+              _moveStartOffset! + resizeMoveResult.startDifference;
+          _widgetsMap.remove(_editing!.id);
+          for (var r in differences) {
+            _widgetsMap.remove(r);
+          }
+          if (_editing!._endIndex > (e)) {
+            widget.shouldCalculateNewDimensions();
+          }
+        });
+      }
+    } else {
+      var resizeMoveResult = _editing!._transformUpdate(
+          local - _moveStartOffset!, pixels - _startScrollPixels!, holdOffset);
+
+      if (resizeMoveResult != null && resizeMoveResult.isChanged) {
+        setState(() {
+          _moveStartOffset =
+              _moveStartOffset! + resizeMoveResult.startDifference;
+          _widgetsMap.remove(_editing!.id);
+
+          if (_editing!._endIndex > (e)) {
+            widget.shouldCalculateNewDimensions();
+          }
+        });
       }
     }
   }

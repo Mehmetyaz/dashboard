@@ -233,6 +233,15 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
     super.initState();
   }
 
+  GlobalKey myWidgetKey = GlobalKey();
+
+  bool get hasDimensions {
+    final RenderBox? renderBox =
+        myWidgetKey.currentContext?.findRenderObject() as RenderBox?;
+    // Checks if the renderBox is not null and has a non-zero size
+    return renderBox != null && renderBox.hasSize;
+  }
+
   bool _building = true;
 
   AsyncSnapshot? get _snap => widget.dashboardItemController._asyncSnap?.value;

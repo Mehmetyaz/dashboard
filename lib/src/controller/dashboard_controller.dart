@@ -47,7 +47,7 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
   /// The [isEditing] does not have to be true to add or delete items.
   ///
   /// Use as setter to change [isEditing] value.
-  bool get isEditing => _layoutController!.isEditing;
+  bool get isEditing => _layoutController?.isEditing ?? false;
 
   /// Change editing status.
   set isEditing(bool value) {
@@ -99,14 +99,13 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
     if (_isAttached) {
       _items.addAll(
           items.asMap().map((key, value) => MapEntry(value.identifier, value)));
-      _layoutController!.addAll(items);
+      _layoutController!.addAll(items, mountToTop: mountToTop);
       itemStorageDelegate?._onItemsAdded(
           items.map((e) => _getItemWithLayout(e.identifier)).toList(),
           _layoutController!.slotCount);
     } else {
       throw Exception("Not Attached");
     }
-    throw 0;
   }
 
   /// Delete an item from Dashboard.
