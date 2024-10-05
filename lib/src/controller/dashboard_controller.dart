@@ -1,6 +1,4 @@
-
 part of '../dashboard_base.dart';
-
 
 /// A controller for dashboard items.
 ///
@@ -806,7 +804,7 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   bool _isAttached = false;
 }
 
-class _OverflowPossibility extends Comparable<_OverflowPossibility> {
+class _OverflowPossibility implements Comparable<_OverflowPossibility> {
   _OverflowPossibility(this.x, this.y, this.w, this.h) : sq = w * h;
 
   int x, y, w, h, sq;
