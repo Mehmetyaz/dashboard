@@ -1,3 +1,5 @@
+// lib\src\widgets\animated_background_painter.dart
+
 part of '../dashboard_base.dart';
 
 class _AnimatedBackgroundPainter extends StatefulWidget {
@@ -30,11 +32,12 @@ class _AnimatedBackgroundPainterState extends State<_AnimatedBackgroundPainter>
 
   @override
   void initState() {
+    super.initState();  // <- MUST come first
     offset = widget.offset.pixels;
     _animationController = AnimationController(
         vsync: this, duration: widget.editModeSettings.duration);
-    super.initState();
   }
+
 
   @override
   void dispose() {
