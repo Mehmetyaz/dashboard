@@ -157,6 +157,15 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
 
   Duration? _timeout;
 
+
+  void notifyItemsChangedExternally(List<T> newItems) {
+    _items = newItems.asMap().map((key, value) => MapEntry(value.identifier, value));
+    _layoutController?.mountItems(); // ← optional: only if you want to refresh visual layout
+    _asyncSnap?.value = AsyncSnapshot.withData(ConnectionState.done, newItems);
+    notifyListeners();
+  }
+
+
   FutureOr<void> _loadItems(int slotCount) {
     var ftr = itemStorageDelegate!._getAllItems(slotCount);
     if (ftr is Future<List<T>>) {
