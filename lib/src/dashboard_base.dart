@@ -12,6 +12,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
 part 'widgets/dashboard.dart';
+part 'widgets/sliver_dashboard.dart';
 
 part 'widgets/dashboard_stack.dart';
 

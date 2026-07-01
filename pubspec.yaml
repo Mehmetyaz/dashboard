@@ -4,9 +4,12 @@ description: Dynamic dashboard widget that allows your users to create their own
 version: 0.0.5
 homepage: https://github.com/Mehmetyaz/dashboard
 repository: https://github.com/Mehmetyaz/dashboard
+publish_to: none
 
 environment:
-  sdk: ">=2.17.0 <4.0.0"
+  sdk: ^3.13.0-228.0.dev
+
+resolution: workspace
 
 dependencies:
   flutter:
@@ -15,6 +18,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.1
+  flutter_lints: ^6.0.0
 
 flutter:
