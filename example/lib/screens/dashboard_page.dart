@@ -13,7 +13,7 @@ class MySlotBackground extends SlotBackgroundBuilder<ColoredDashboardItem> {
     if (item != null) {
       return Container(
         decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.5),
+            color: Colors.red.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10)),
       );
     }

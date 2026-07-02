@@ -24,7 +24,8 @@ typedef DashboardItemBuilder<T extends DashboardItem> = Widget Function(T item);
 /// This controller is also used to add/delete widget and handle layout changes.
 class Dashboard<T extends DashboardItem> extends StatefulWidget {
   /// A list of widget arranged with hand or initially.
-  Dashboard({super.key,
+  Dashboard({
+    super.key,
     required this.itemBuilder,
     required this.dashboardItemController,
     this.slotCount = 8,
@@ -49,10 +50,12 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
     this.animateEverytime = true,
     this.itemStyle = const ItemStyle(),
     this.scrollToAdded = true,
-    this.slotBackgroundBuilder})
-      : assert((slotHeight == null && slotAspectRatio == null) ||
-      !(slotHeight != null && slotAspectRatio != null)),
-        editModeSettings = editModeSettings ?? EditModeSettings();
+    this.slotBackgroundBuilder,
+  }) : assert(
+         (slotHeight == null && slotAspectRatio == null) ||
+             !(slotHeight != null && slotAspectRatio != null),
+       ),
+       editModeSettings = editModeSettings ?? EditModeSettings();
 
   /// If [slotBackgroundBuilder] is not null, the background of the slots
   /// is drawn with the  [SlotBackgroundBuilder.build] method.
@@ -235,7 +238,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   bool get hasDimensions {
     final RenderBox? renderBox =
-    myWidgetKey.currentContext?.findRenderObject() as RenderBox?;
+        myWidgetKey.currentContext?.findRenderObject() as RenderBox?;
     // Checks if the renderBox is not null and has a non-zero size
     return renderBox != null && renderBox.hasSize;
   }
@@ -267,15 +270,20 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
   }
 
   ///
-  _setNewOffset(ViewportOffset o, BoxConstraints constraints, [bool i = true]) {
+  void _setNewOffset(
+    ViewportOffset o,
+    BoxConstraints constraints, [
+    bool i = true,
+  ]) {
     /// check slot count
     /// check new constrains equal exists
     _layoutController.absorbPointer = widget.absorbPointer;
     _layoutController._viewportDelegate = _ViewportDelegate(
-        constraints: constraints,
-        padding: widget.padding.resolve(widget.textDirection),
-        mainAxisSpace: widget.horizontalSpace,
-        crossAxisSpace: widget.verticalSpace);
+      constraints: constraints,
+      padding: widget.padding.resolve(widget.textDirection),
+      mainAxisSpace: widget.horizontalSpace,
+      crossAxisSpace: widget.verticalSpace,
+    );
 
     if (_layoutController._isAttached &&
         (_layoutController.slotCount != widget.slotCount ||
@@ -283,29 +291,31 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
             _layoutController.shrinkToPlace != widget.shrinkToPlace) &&
         !_reloading) {
       _layoutController.attach(
-          viewportOffset: o,
-          shrinkOnMove: widget.editModeSettings.shrinkOnMove,
-          animateEverytime: widget.animateEverytime,
-          slideToTop: widget.slideToTop,
-          shrinkToPlace: widget.shrinkToPlace,
-          axis: Axis.vertical,
-          itemController: widget.dashboardItemController,
-          slotCount: widget.slotCount,
-          scrollToAdded: widget.scrollToAdded);
+        viewportOffset: o,
+        shrinkOnMove: widget.editModeSettings.shrinkOnMove,
+        animateEverytime: widget.animateEverytime,
+        slideToTop: widget.slideToTop,
+        shrinkToPlace: widget.shrinkToPlace,
+        axis: Axis.vertical,
+        itemController: widget.dashboardItemController,
+        slotCount: widget.slotCount,
+        scrollToAdded: widget.scrollToAdded,
+      );
       _setOnNextFrame();
     }
 
     if (!_layoutController._isAttached) {
       _layoutController.attach(
-          viewportOffset: o,
-          shrinkOnMove: widget.editModeSettings.shrinkOnMove,
-          animateEverytime: widget.animateEverytime,
-          slideToTop: widget.slideToTop,
-          shrinkToPlace: widget.shrinkToPlace,
-          axis: Axis.vertical,
-          itemController: widget.dashboardItemController,
-          slotCount: widget.slotCount,
-          scrollToAdded: widget.scrollToAdded);
+        viewportOffset: o,
+        shrinkOnMove: widget.editModeSettings.shrinkOnMove,
+        animateEverytime: widget.animateEverytime,
+        slideToTop: widget.slideToTop,
+        shrinkToPlace: widget.shrinkToPlace,
+        axis: Axis.vertical,
+        itemController: widget.dashboardItemController,
+        slotCount: widget.slotCount,
+        scrollToAdded: widget.scrollToAdded,
+      );
       _setOnNextFrame();
     }
 
@@ -314,22 +324,27 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
     if (widget.slotHeight != null) {
       h = widget.slotHeight!;
     } else if (widget.slotAspectRatio != null) {
-      h = _layoutController._viewportDelegate.resolvedConstrains.maxWidth /
+      h =
+          _layoutController._viewportDelegate.resolvedConstrains.maxWidth /
           widget.slotCount /
           widget.slotAspectRatio!;
     } else {
-      h = _layoutController._viewportDelegate.resolvedConstrains.maxWidth /
+      h =
+          _layoutController._viewportDelegate.resolvedConstrains.maxWidth /
           widget.slotCount;
     }
 
     _layoutController._setSizes(
-        _layoutController._viewportDelegate.resolvedConstrains, h);
+      _layoutController._viewportDelegate.resolvedConstrains,
+      h,
+    );
 
     _offset = o;
 
     if (i) {
       offset.applyViewportDimension(
-          _layoutController._viewportDelegate.constraints.maxHeight);
+        _layoutController._viewportDelegate.constraints.maxHeight,
+      );
     }
 
     if (!i) {
@@ -361,10 +376,10 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   ///
   final GlobalKey<_DashboardStackState<T>> _stateKey =
-  GlobalKey<_DashboardStackState<T>>();
+      GlobalKey<_DashboardStackState<T>>();
 
   final GlobalKey<ScrollableState> _scrollableKey =
-  GlobalKey<ScrollableState>();
+      GlobalKey<ScrollableState>();
 
   bool scrollable = true;
 
@@ -379,7 +394,9 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
         _layoutController.slotCount != widget.slotCount &&
         _withDelegate &&
         widget
-            .dashboardItemController.itemStorageDelegate!.layoutsBySlotCount) {
+            .dashboardItemController
+            .itemStorageDelegate!
+            .layoutsBySlotCount) {
       _reloading = true;
       _reloadFor = widget.slotCount;
       widget.dashboardItemController._items.clear();
@@ -393,21 +410,6 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           if (_reloadFor == widget.slotCount) {
             _reloading = false;
             _layoutController.attach(
-                viewportOffset: offset,
-                shrinkOnMove: widget.editModeSettings.shrinkOnMove,
-                animateEverytime: widget.animateEverytime,
-                slideToTop: widget.slideToTop,
-                shrinkToPlace: widget.shrinkToPlace,
-                axis: Axis.vertical,
-                itemController: widget.dashboardItemController,
-                slotCount: widget.slotCount,
-                scrollToAdded: widget.scrollToAdded);
-          }
-        });
-      } else {
-        if (_reloadFor == widget.slotCount) {
-          _reloading = false;
-          _layoutController.attach(
               viewportOffset: offset,
               shrinkOnMove: widget.editModeSettings.shrinkOnMove,
               animateEverytime: widget.animateEverytime,
@@ -416,103 +418,125 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
               axis: Axis.vertical,
               itemController: widget.dashboardItemController,
               slotCount: widget.slotCount,
-              scrollToAdded: widget.scrollToAdded);
+              scrollToAdded: widget.scrollToAdded,
+            );
+          }
+        });
+      } else {
+        if (_reloadFor == widget.slotCount) {
+          _reloading = false;
+          _layoutController.attach(
+            viewportOffset: offset,
+            shrinkOnMove: widget.editModeSettings.shrinkOnMove,
+            animateEverytime: widget.animateEverytime,
+            slideToTop: widget.slideToTop,
+            shrinkToPlace: widget.shrinkToPlace,
+            axis: Axis.vertical,
+            itemController: widget.dashboardItemController,
+            slotCount: widget.slotCount,
+            scrollToAdded: widget.scrollToAdded,
+          );
         }
       }
     }
 
-    return LayoutBuilder(builder: (context, constrains) {
-      Unbounded.check(Axis.vertical, constrains);
-      if (_withDelegate) {
-        if (_snap!.connectionState == ConnectionState.none) {
-          _building = false;
-          return widget.errorPlaceholder
-              ?.call(_snap!.error!, _snap!.stackTrace!) ??
-              const SizedBox();
-        } else if (_snap!.connectionState == ConnectionState.waiting ||
-            _reloading) {
-          _building = false;
+    return LayoutBuilder(
+      builder: (context, constrains) {
+        Unbounded.check(Axis.vertical, constrains);
+        if (_withDelegate) {
+          if (_snap!.connectionState == ConnectionState.none) {
+            _building = false;
+            return widget.errorPlaceholder?.call(
+                  _snap!.error!,
+                  _snap!.stackTrace!,
+                ) ??
+                const SizedBox();
+          } else if (_snap!.connectionState == ConnectionState.waiting ||
+              _reloading) {
+            _building = false;
 
-          return widget.loadingPlaceholder ??
-              const Center(
-                child: CircularProgressIndicator(),
-              );
+            return widget.loadingPlaceholder ??
+                const Center(child: CircularProgressIndicator());
+          }
         }
-      }
 
-      return dashboardWidget(constrains);
-    });
+        return dashboardWidget(constrains);
+      },
+    );
   }
 
   bool _moving = false;
 
   Widget dashboardWidget(BoxConstraints constrains) {
     return Scrollable(
-        physics:
-        scrollable ? widget.physics : const NeverScrollableScrollPhysics(),
-        key: _scrollableKey,
-        controller: widget.scrollController,
-        semanticChildCount: widget.dashboardItemController._items.length,
-        dragStartBehavior: widget.dragStartBehavior ?? DragStartBehavior.start,
-        scrollBehavior: widget.scrollBehavior,
-        viewportBuilder: (c, o) {
-          _layoutController._viewportOffset = o;
-          if (!_reloading) _setNewOffset(o, constrains);
-          WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-            _stateKey.currentState?._listenOffset(o);
-          });
-          _building = false;
-          return _DashboardStack<T>(
-            itemStyle: widget.itemStyle,
-            shouldCalculateNewDimensions: () {
-              if (_moving) {
+      physics: scrollable
+          ? widget.physics
+          : const NeverScrollableScrollPhysics(),
+      key: _scrollableKey,
+      controller: widget.scrollController,
+      semanticChildCount: widget.dashboardItemController._items.length,
+      dragStartBehavior: widget.dragStartBehavior ?? DragStartBehavior.start,
+      scrollBehavior: widget.scrollBehavior,
+      viewportBuilder: (c, o) {
+        _layoutController._viewportOffset = o;
+        if (!_reloading) _setNewOffset(o, constrains);
+        WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+          _stateKey.currentState?._listenOffset(o);
+        });
+        _building = false;
+        return _DashboardStack<T>(
+          itemStyle: widget.itemStyle,
+          shouldCalculateNewDimensions: () {
+            if (_moving) {
+              return;
+            }
+            _setNewOffset(o, constrains);
+          },
+          onScrollStateChange: (st) {
+            SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+              _moving = !st;
+
+              setState(() {
+                scrollable = st;
+              });
+
+              if (!_moving) {
                 return;
               }
-              _setNewOffset(o, constrains);
-            },
-            onScrollStateChange: (st) {
-
-              SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-                _moving = !st;
-
-                setState(() {
-                  scrollable = st;
-                });
-
-                if (!_moving) {
-                  return;
-                }
-                _setNewOffset(o, constrains, _moving);
-              });
-            },
-            emptyPlaceholder: widget.emptyPlaceholder,
-            maxScrollOffset: _maxExtend,
-            editModeSettings: widget.editModeSettings,
-            cacheExtend: widget.cacheExtend,
-            key: _stateKey,
-            itemBuilder: widget.itemBuilder,
-            dashboardController: _layoutController,
-            offset: offset,
-            slotBackground: widget.slotBackgroundBuilder,
-          );
-        });
+              _setNewOffset(o, constrains, _moving);
+            });
+          },
+          emptyPlaceholder: widget.emptyPlaceholder,
+          maxScrollOffset: _maxExtend,
+          editModeSettings: widget.editModeSettings,
+          cacheExtend: widget.cacheExtend,
+          key: _stateKey,
+          itemBuilder: widget.itemBuilder,
+          dashboardController: _layoutController,
+          offset: offset,
+          slotBackground: widget.slotBackgroundBuilder,
+        );
+      },
+    );
   }
 }
 
 class _ItemCurrentPositionTween extends Tween<_ItemCurrentPosition> {
-  _ItemCurrentPositionTween({required _ItemCurrentPosition begin,
+  _ItemCurrentPositionTween({
+    required _ItemCurrentPosition begin,
     required _ItemCurrentPosition end,
-    required this.onlyDimensions})
-      : super(begin: begin, end: end);
+    required this.onlyDimensions,
+  }) : super(begin: begin, end: end);
 
   bool onlyDimensions;
 
   @override
   _ItemCurrentPosition lerp(double t) {
     return _ItemCurrentPosition(
-        width: begin!.width * (1.0 - t) + end!.width * t,
-        height: begin!.height * (1.0 - t) + end!.height * t,
-        x: onlyDimensions ? end!.x : begin!.x * (1.0 - t) + end!.x * t,
-        y: onlyDimensions ? end!.y : begin!.y * (1.0 - t) + end!.y * t);
+      width: begin!.width * (1.0 - t) + end!.width * t,
+      height: begin!.height * (1.0 - t) + end!.height * t,
+      x: onlyDimensions ? end!.x : begin!.x * (1.0 - t) + end!.x * t,
+      y: onlyDimensions ? end!.y : begin!.y * (1.0 - t) + end!.y * t,
+    );
   }
 }

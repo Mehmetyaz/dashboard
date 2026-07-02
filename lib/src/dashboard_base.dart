@@ -1,3 +1,4 @@
+// ignore: unnecessary_library_name
 library dashboard;
 
 import 'dart:async';

@@ -1,15 +1,19 @@
 part of '../dashboard_base.dart';
 
 class DashboardItemWidget<T extends DashboardItem> extends InheritedWidget {
-  const DashboardItemWidget(
-      {required this.item, required super.child, super.key});
+  const DashboardItemWidget({
+    required this.item,
+    required super.child,
+    super.key,
+  });
 
   final DashboardItem item;
 
   static DashboardItemWidget<T> of<T extends DashboardItem>(
-      BuildContext context) {
-    final DashboardItemWidget? result =
-        context.dependOnInheritedWidgetOfExactType<DashboardItemWidget>();
+    BuildContext context,
+  ) {
+    final DashboardItemWidget? result = context
+        .dependOnInheritedWidgetOfExactType<DashboardItemWidget>();
     assert(result != null, 'No DashboardItemWidget found in context');
     return result! as DashboardItemWidget<T>;
   }
@@ -21,17 +25,17 @@ class DashboardItemWidget<T extends DashboardItem> extends InheritedWidget {
 }
 
 class _DashboardItemWidget extends StatefulWidget {
-  const _DashboardItemWidget(
-      {required Key key,
-      required this.layoutController,
-      required this.child,
-      required this.editModeSettings,
-      required this.id,
-      required this.itemCurrentLayout,
-      required this.itemGlobalPosition,
-      required this.offset,
-      required this.style})
-      : super(key: key);
+  const _DashboardItemWidget({
+    required Key key,
+    required this.layoutController,
+    required this.child,
+    required this.editModeSettings,
+    required this.id,
+    required this.itemCurrentLayout,
+    required this.itemGlobalPosition,
+    required this.offset,
+    required this.style,
+  }) : super(key: key);
 
   final _ItemCurrentLayout itemCurrentLayout;
   final Widget child;
@@ -60,7 +64,7 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
     super.dispose();
   }
 
-  _listen() {
+  void _listen() {
     setState(() {});
   }
 
@@ -70,9 +74,14 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
   void initState() {
     cursor = MouseCursor.defer;
     _animationController = AnimationController(
-        vsync: this, duration: widget.editModeSettings.duration);
+      vsync: this,
+      duration: widget.editModeSettings.duration,
+    );
     _multiplierAnimationController = AnimationController(
-        vsync: this, value: 0, duration: widget.editModeSettings.duration);
+      vsync: this,
+      value: 0,
+      duration: widget.editModeSettings.duration,
+    );
     widget.itemCurrentLayout.addListener(_listen);
     super.initState();
   }
@@ -161,21 +170,25 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
   _ItemCurrentPosition? _lastPosition;
 
   Future<void> _setLast(
-      Offset? lastOffset, _ItemCurrentPosition? lastPosition) async {
+    Offset? lastOffset,
+    _ItemCurrentPosition? lastPosition,
+  ) async {
     _lastTransform = lastOffset;
     _lastPosition = lastPosition;
     _multiplierAnimationController.reset();
     _multiplierAnimationController.value = 1;
     await _multiplierAnimationController
-        .animateTo(0,
-            duration: widget.editModeSettings.duration,
-            curve: widget.editModeSettings.curve)
+        .animateTo(
+          0,
+          duration: widget.editModeSettings.duration,
+          curve: widget.editModeSettings.curve,
+        )
         .then((value) {
-      setState(() {
-        _lastTransform = null;
-        _lastPosition = null;
-      });
-    });
+          setState(() {
+            _lastTransform = null;
+            _lastPosition = null;
+          });
+        });
   }
 
   bool get onEditMode => widget.layoutController.isEditing;
@@ -208,11 +221,13 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
       );
     }
 
-    var currentEdit = widget.layoutController.editSession?.editing.id ==
+    var currentEdit =
+        widget.layoutController.editSession?.editing.id ==
         widget.itemCurrentLayout.id;
 
-    var transform =
-        currentEdit ? widget.layoutController.editSession!.transform : false;
+    var transform = currentEdit
+        ? widget.layoutController.editSession!.transform
+        : false;
 
     var onlyDimensions = currentEdit && transform;
 
@@ -226,31 +241,40 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
       if (onAnimation) {
         ex = _animation!.value;
 
-        var difMicro = (widget.editModeSettings.duration -
-                (DateTime.now().difference(animationStart!).abs()))
-            .inMicroseconds;
+        var difMicro =
+            (widget.editModeSettings.duration -
+                    (DateTime.now().difference(animationStart!).abs()))
+                .inMicroseconds;
         _animationController.duration = Duration(
-            microseconds: difMicro.clamp(
-                0, widget.editModeSettings.duration.inMicroseconds));
+          microseconds: difMicro.clamp(
+            0,
+            widget.editModeSettings.duration.inMicroseconds,
+          ),
+        );
       } else {
         animationStart = DateTime.now();
         onAnimation = true;
       }
       _animationController.reset();
 
-      _animation = CurvedAnimation(
-              parent: _animationController,
-              curve: widget.editModeSettings.curve)
-          .drive(_ItemCurrentPositionTween(
+      _animation =
+          CurvedAnimation(
+            parent: _animationController,
+            curve: widget.editModeSettings.curve,
+          ).drive(
+            _ItemCurrentPositionTween(
               begin: onlyDimensions
                   ? _ItemCurrentPosition(
                       height: ex!.height,
                       width: ex!.width,
                       y: widget.itemGlobalPosition.y,
-                      x: widget.itemGlobalPosition.x)
+                      x: widget.itemGlobalPosition.x,
+                    )
                   : ex!,
               end: widget.itemGlobalPosition,
-              onlyDimensions: onlyDimensions));
+              onlyDimensions: onlyDimensions,
+            ),
+          );
 
       _animationController.forward().then((value) {
         onAnimation = false;
@@ -267,11 +291,12 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
     if (!onEditMode && !widget.layoutController.animateEverytime) {
       var cp = widget.itemGlobalPosition;
       return Positioned(
-          left: cp.x,
-          top: cp.y - widget.offset.pixels,
-          width: cp.width,
-          height: cp.height,
-          child: result);
+        left: cp.x,
+        top: cp.y - widget.offset.pixels,
+        width: cp.width,
+        height: cp.height,
+        child: result,
+      );
     }
 
     return AnimatedBuilder(
@@ -340,11 +365,12 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
         }
 
         return Positioned(
-            left: left,
-            top: top - widget.offset.pixels,
-            width: cp.width,
-            height: cp.height,
-            child: w!);
+          left: left,
+          top: top - widget.offset.pixels,
+          width: cp.width,
+          height: cp.height,
+          child: w!,
+        );
       },
     );
   }
