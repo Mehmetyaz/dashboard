@@ -14,6 +14,7 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
     required this.itemStyle,
     required this.emptyPlaceholder,
     required this.slotBackground,
+    this.itemDecorator,
   });
 
   final Widget? emptyPlaceholder;
@@ -31,6 +32,7 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
   final ItemStyle itemStyle;
 
   final void Function() shouldCalculateNewDimensions;
+  final DashboardItemDecorator<T>? itemDecorator;
 
   @override
   State<_DashboardStack<T>> createState() => _DashboardStackState<T>();
@@ -100,6 +102,16 @@ class _DashboardStackState<T extends DashboardItem>
       child: list[1],
       offset: viewportOffset,
       layoutController: widget.dashboardController,
+      itemDecorator: widget.itemDecorator != null
+          ? (context, item, child, isEditing, isDragging) =>
+              widget.itemDecorator!(
+                context,
+                item as T,
+                child,
+                isEditing,
+                isDragging,
+              )
+          : null,
     );
   }
 

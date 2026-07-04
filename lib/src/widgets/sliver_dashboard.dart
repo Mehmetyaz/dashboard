@@ -81,6 +81,7 @@ class SliverDashboard<T extends DashboardItem> extends StatefulWidget {
     this.itemStyle = const ItemStyle(),
     this.scrollToAdded = true,
     this.slotBackgroundBuilder,
+    this.itemDecorator,
   })  : assert((slotHeight == null && slotAspectRatio == null) ||
             !(slotHeight != null && slotAspectRatio != null)),
         editModeSettings = editModeSettings ?? EditModeSettings();
@@ -106,6 +107,9 @@ class SliverDashboard<T extends DashboardItem> extends StatefulWidget {
   final bool slideToTop;
   final TextDirection textDirection;
   final ItemStyle itemStyle;
+
+  /// A builder that allows decorating/wrapping each item, especially in edit mode.
+  final DashboardItemDecorator<T>? itemDecorator;
 
   @override
   State<SliverDashboard<T>> createState() => _SliverDashboardState<T>();
@@ -356,6 +360,7 @@ class _SliverDashboardState<T extends DashboardItem>
           dashboardController: _layoutController,
           offset: _viewportOffset,
           slotBackground: widget.slotBackgroundBuilder,
+          itemDecorator: widget.itemDecorator,
         ),
       );
     });

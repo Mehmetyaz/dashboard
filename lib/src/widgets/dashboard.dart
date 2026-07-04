@@ -3,6 +3,15 @@ part of '../dashboard_base.dart';
 ///
 typedef DashboardItemBuilder<T extends DashboardItem> = Widget Function(T item);
 
+///
+typedef DashboardItemDecorator<T extends DashboardItem> = Widget Function(
+  BuildContext context,
+  T item,
+  Widget child,
+  bool isEditing,
+  bool isDragging,
+);
+
 /// A list of widget arranged with hand or initially.
 ///
 /// [Dashboard] is scrolling widget that contains items which can
@@ -51,6 +60,7 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
     this.itemStyle = const ItemStyle(),
     this.scrollToAdded = true,
     this.slotBackgroundBuilder,
+    this.itemDecorator,
   }) : assert(
          (slotHeight == null && slotAspectRatio == null) ||
              !(slotHeight != null && slotAspectRatio != null),
@@ -203,6 +213,9 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   ///
   /// Look [Material] documentation for more.
   final ItemStyle itemStyle;
+
+  /// A builder that allows decorating/wrapping each item, especially in edit mode.
+  final DashboardItemDecorator<T>? itemDecorator;
 
   @override
   State<Dashboard<T>> createState() => _DashboardState<T>();
@@ -515,6 +528,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           dashboardController: _layoutController,
           offset: offset,
           slotBackground: widget.slotBackgroundBuilder,
+          itemDecorator: widget.itemDecorator,
         );
       },
     );

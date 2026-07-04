@@ -35,6 +35,7 @@ class _DashboardItemWidget extends StatefulWidget {
     required this.itemGlobalPosition,
     required this.offset,
     required this.style,
+    this.itemDecorator,
   }) : super(key: key);
 
   final _ItemCurrentLayout itemCurrentLayout;
@@ -45,6 +46,13 @@ class _DashboardItemWidget extends StatefulWidget {
   final _ItemCurrentPosition itemGlobalPosition;
   final ViewportOffset offset;
   final ItemStyle style;
+  final Widget Function(
+    BuildContext context,
+    DashboardItem item,
+    Widget child,
+    bool isEditing,
+    bool isDragging,
+  )? itemDecorator;
 
   @override
   State<_DashboardItemWidget> createState() => _DashboardItemWidgetState();
@@ -224,6 +232,17 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
     var currentEdit =
         widget.layoutController.editSession?.editing.id ==
         widget.itemCurrentLayout.id;
+
+    final item = widget.layoutController.itemController._items[widget.id];
+    if (item != null && widget.itemDecorator != null) {
+      result = widget.itemDecorator!(
+        context,
+        item,
+        result,
+        onEditMode,
+        currentEdit,
+      );
+    }
 
     var transform = currentEdit
         ? widget.layoutController.editSession!.transform
