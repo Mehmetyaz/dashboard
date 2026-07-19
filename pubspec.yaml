@@ -7,8 +7,7 @@ repository: https://github.com/Mehmetyaz/dashboard
 publish_to: none
 
 environment:
-  sdk: ^3.12.2
-
+  sdk: ^3.14.0-41.0.dev
 
 dependencies:
   flutter:
