@@ -1,4 +1,5 @@
 name: dashboard
+resolution: workspace
 description: Dynamic dashboard widget that allows your users to create their own layouts. Resize, move, indirect resize/move, auto
   re-layout are supported.
 version: 0.0.5
