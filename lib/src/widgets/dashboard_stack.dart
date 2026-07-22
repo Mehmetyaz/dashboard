@@ -15,8 +15,10 @@ class _DashboardStack<T extends DashboardItem> extends StatefulWidget {
     required this.emptyPlaceholder,
     required this.slotBackground,
     this.itemDecorator,
+    this.isSliver = false,
   });
 
+  final bool isSliver;
   final Widget? emptyPlaceholder;
   final ViewportOffset offset;
   final _DashboardLayoutController<T> dashboardController;
@@ -57,14 +59,6 @@ class _DashboardStackState<T extends DashboardItem>
     super.didUpdateWidget(old);
   }
 
-  ///
-  void _listenOffset(ViewportOffset o) {
-    setState(() {});
-    o.removeListener(_listen);
-    o.addListener(_listen);
-  }
-
-  ///
   @override
   void didChangeDependencies() {
     _widgetsMap.clear();
@@ -79,39 +73,58 @@ class _DashboardStackState<T extends DashboardItem>
 
   @override
   void dispose() {
-    viewportOffset.removeListener(_listen);
     super.dispose();
   }
 
-  void _listen() {
-    setState(() {});
-  }
-
   Widget buildPositioned(List list) {
+    final String id = list[2];
+    final _ItemCurrentLayout layout = list[0];
+    final _ItemCurrentPosition cp = layout._currentPosition(
+      viewportDelegate: viewportDelegate,
+      slotEdge: slotEdge,
+      verticalSlotEdge: verticalSlotEdge,
+    );
+
+    final bool isEditing = widget.dashboardController.isEditing;
+    final bool isDragging = widget.dashboardController.editSession?.editing.id == id;
+    final T? item = widget.dashboardController.itemController._items[id];
+
+    Widget childWidget = list[1];
+    if (item != null && widget.itemDecorator != null) {
+      childWidget = widget.itemDecorator!(
+        context,
+        item,
+        childWidget,
+        isEditing,
+        isDragging,
+      );
+    }
+
+    if (!isEditing && (!widget.dashboardController.animateEverytime || !layout._change)) {
+      return Positioned(
+        key: ValueKey(id),
+        left: cp.x,
+        top: cp.y,
+        width: cp.width,
+        height: cp.height,
+        child: RepaintBoundary(
+          key: ValueKey('rb_$id'),
+          child: childWidget,
+        ),
+      );
+    }
+
     return _DashboardItemWidget(
       style: widget.itemStyle,
-      key: _keys[list[2]]!,
-      itemGlobalPosition: (list[0] as _ItemCurrentLayout)._currentPosition(
-        viewportDelegate: viewportDelegate,
-        slotEdge: slotEdge,
-        verticalSlotEdge: verticalSlotEdge,
-      ),
-      itemCurrentLayout: list[0],
-      id: list[2],
+      key: _keys[id]!,
+      itemGlobalPosition: cp,
+      itemCurrentLayout: layout,
+      id: id,
       editModeSettings: widget.editModeSettings,
-      child: list[1],
       offset: viewportOffset,
       layoutController: widget.dashboardController,
-      itemDecorator: widget.itemDecorator != null
-          ? (context, item, child, isEditing, isDragging) =>
-              widget.itemDecorator!(
-                context,
-                item as T,
-                child,
-                isEditing,
-                isDragging,
-              )
-          : null,
+      itemDecorator: null,
+      child: RepaintBoundary(child: childWidget),
     );
   }
 
@@ -124,21 +137,28 @@ class _DashboardStackState<T extends DashboardItem>
     var l = widget.dashboardController._layouts![i!.identifier]!;
     i.layoutData = l.asLayout();
 
+    final itemWidget = widget.itemBuilder(i);
+    final bool useMaterial = (widget.itemStyle.elevation != null && widget.itemStyle.elevation! > 0) ||
+        widget.itemStyle.color != null ||
+        widget.itemStyle.shape != null ||
+        (widget.itemStyle.type != null && widget.itemStyle.type != MaterialType.transparency);
+
     _widgetsMap[id] = [
       l,
       DashboardItemWidget(
         item: i,
-        child: Material(
-          elevation: widget.itemStyle.elevation ?? 0.0,
-          type: widget.itemStyle.type ?? MaterialType.card,
-          shape: widget.itemStyle.shape,
-          color: widget.itemStyle.color,
-          clipBehavior: widget.itemStyle.clipBehavior ?? Clip.none,
-          animationDuration:
-              widget.itemStyle.animationDuration ?? kThemeChangeDuration,
-          child: widget.itemBuilder(i),
-          //shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        ),
+        child: useMaterial
+            ? Material(
+                elevation: widget.itemStyle.elevation ?? 0.0,
+                type: widget.itemStyle.type ?? MaterialType.card,
+                shape: widget.itemStyle.shape,
+                color: widget.itemStyle.color,
+                clipBehavior: widget.itemStyle.clipBehavior ?? Clip.none,
+                animationDuration:
+                    widget.itemStyle.animationDuration ?? kThemeChangeDuration,
+                child: itemWidget,
+              )
+            : itemWidget,
       ),
       id,
     ];
@@ -159,8 +179,7 @@ class _DashboardStackState<T extends DashboardItem>
     var l =
         viewportDelegate.padding.left + (viewportDelegate.crossAxisSpace / 2);
     var t =
-        viewportDelegate.padding.top -
-        pixels +
+        viewportDelegate.padding.top +
         (viewportDelegate.mainAxisSpace / 2);
     var w = slotEdge - viewportDelegate.crossAxisSpace;
     var h = verticalSlotEdge - viewportDelegate.mainAxisSpace;
@@ -170,19 +189,18 @@ class _DashboardStackState<T extends DashboardItem>
       var y = (i / widget.dashboardController.slotCount).floor();
       widget.slotBackground!._itemController =
           widget.dashboardController.itemController;
-      res.add(
-        Positioned(
-          left: x * slotEdge + l,
-          top: y * verticalSlotEdge + t,
-          width: w,
-          height: h,
-          child: Builder(
-            builder: (c) {
-              return widget.slotBackground!._build(context, x, y);
-            },
+      final bgWidget = widget.slotBackground!._build(context, x, y);
+      if (bgWidget != null && bgWidget is! SizedBox) {
+        res.add(
+          Positioned(
+            left: x * slotEdge + l,
+            top: y * verticalSlotEdge + t,
+            width: w,
+            height: h,
+            child: bgWidget,
           ),
-        ),
-      );
+        );
+      }
       i++;
     }
 
@@ -210,59 +228,14 @@ class _DashboardStackState<T extends DashboardItem>
       endY,
     ]);
 
-    var needs = <String>[];
-    var key = startIndex;
+    final needs = widget.dashboardController._indexesTree.itemsInRange(startIndex, endIndex);
 
-    if (widget.dashboardController._indexesTree[key] != null) {
-      needs.add(widget.dashboardController._indexesTree[key]!);
-    }
-
-    while (true) {
-      var f = widget.dashboardController._indexesTree.firstKeyAfter(key);
-      if (f != null) {
-        key = f;
-        needs.add(widget.dashboardController._indexesTree[key]!);
-        if (key >= endIndex) {
-          break;
-        }
-      } else {
-        break;
-      }
-    }
-
-    var beforeIt = <String>[];
-    key = startIndex;
-    while (true) {
-      var f = widget.dashboardController._indexesTree.lastKeyBefore(key);
-      if (f != null) {
-        key = f;
-        beforeIt.add(widget.dashboardController._indexesTree[key]!);
-      } else {
-        break;
-      }
-    }
-
-    var afterIt = <String>[];
-    key = startIndex;
-    while (true) {
-      var f = widget.dashboardController._indexesTree.firstKeyAfter(key);
-      if (f != null) {
-        key = f;
-        afterIt.add(widget.dashboardController._indexesTree[key]!);
-      } else {
-        break;
-      }
-    }
-
-    var needDelete = [...afterIt, ...beforeIt];
+    final validIds = widget.dashboardController.itemController._items.keys.toSet();
+    _keys.removeWhere((k, _) => !validIds.contains(k));
 
     var edit = widget.dashboardController.editSession?.editing;
 
-    for (var n in needDelete) {
-      if (!needs.contains(n) && n != edit?.id) {
-        _widgetsMap.remove(n);
-      }
-    }
+    _widgetsMap.removeWhere((n, _) => !needs.contains(n) && n != edit?.id);
 
     for (var n in needs) {
       if (!_widgetsMap.containsKey(n)) {
@@ -277,7 +250,7 @@ class _DashboardStackState<T extends DashboardItem>
     }
 
     Widget result = Stack(
-      clipBehavior: Clip.hardEdge,
+      clipBehavior: widget.dashboardController.isEditing ? Clip.hardEdge : Clip.none,
       children: [
         if (widget.slotBackground != null) ..._buildBackground(),
         if (widget.dashboardController.isEditing)
@@ -375,6 +348,20 @@ class _DashboardStackState<T extends DashboardItem>
         child: result,
       );
     }
+
+    if (!widget.isSliver) {
+      result = AnimatedBuilder(
+        animation: viewportOffset,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, -viewportOffset.pixels),
+            child: child,
+          );
+        },
+        child: result,
+      );
+    }
+
     return result;
   }
 

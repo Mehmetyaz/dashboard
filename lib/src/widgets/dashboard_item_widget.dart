@@ -307,11 +307,15 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
       ex = widget.itemGlobalPosition;
       widget.itemCurrentLayout._change = false;
     }
-    if (!onEditMode && !widget.layoutController.animateEverytime) {
+    final bool hasActiveTransform =
+        widget.itemCurrentLayout._transform?.value != null ||
+        widget.itemCurrentLayout._resizePosition?.value != null;
+
+    if (!onEditMode && !onAnimation && !hasActiveTransform) {
       var cp = widget.itemGlobalPosition;
       return Positioned(
         left: cp.x,
-        top: cp.y - widget.offset.pixels,
+        top: cp.y,
         width: cp.width,
         height: cp.height,
         child: result,
@@ -320,11 +324,8 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
 
     return AnimatedBuilder(
       animation: Listenable.merge([
-        if (widget.itemCurrentLayout._resizePosition != null)
-          widget.itemCurrentLayout._resizePosition,
-        if (widget.itemCurrentLayout._transform != null)
-          widget.itemCurrentLayout._transform,
-        if (_animation != null) _animation,
+        widget.itemCurrentLayout,
+        ?_animation,
         if (onEditMode) _multiplierAnimationController,
       ]),
       child: result,
@@ -385,7 +386,7 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget>
 
         return Positioned(
           left: left,
-          top: top - widget.offset.pixels,
+          top: top,
           width: cp.width,
           height: cp.height,
           child: w!,

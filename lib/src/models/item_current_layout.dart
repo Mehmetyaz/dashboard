@@ -207,7 +207,9 @@ class _ItemCurrentLayout extends ChangeNotifier implements ItemLayout {
   bool _change = false;
 
   void _clearListeners() {
+    _resizePosition?.dispose();
     _resizePosition = null;
+    _transform?.dispose();
     _transform = null;
     notifyListeners();
   }

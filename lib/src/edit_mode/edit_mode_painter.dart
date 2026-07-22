@@ -136,13 +136,14 @@ class _EditModeBackgroundPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_EditModeBackgroundPainter oldDelegate) {
-    return true /*fillPosition != oldDelegate.fillPosition ||
+    return fillPosition != oldDelegate.fillPosition ||
         offset != oldDelegate.offset ||
         slotEdge != oldDelegate.slotEdge ||
+        verticalSlotEdge != oldDelegate.verticalSlotEdge ||
         slotCount != oldDelegate.slotCount ||
         style != oldDelegate.style ||
-        viewportDelegate != oldDelegate.viewportDelegate*/
-        ;
+        lines != oldDelegate.lines ||
+        viewportDelegate != oldDelegate.viewportDelegate;
   }
 
   @override

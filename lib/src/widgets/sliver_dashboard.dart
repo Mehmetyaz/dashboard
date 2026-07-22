@@ -323,9 +323,6 @@ class _SliverDashboardState<T extends DashboardItem>
         _setNewOffset(_viewportOffset, boxConstraints);
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-        _stateKey.currentState?._listenOffset(_viewportOffset);
-      });
       _building = false;
 
       return SliverDashboardWrapper(
@@ -361,6 +358,7 @@ class _SliverDashboardState<T extends DashboardItem>
           offset: _viewportOffset,
           slotBackground: widget.slotBackgroundBuilder,
           itemDecorator: widget.itemDecorator,
+          isSliver: true,
         ),
       );
     });

@@ -14,7 +14,7 @@ abstract class SlotBackgroundBuilder<T extends DashboardItem> {
 
   DashboardItemController<T>? _itemController;
 
-  Widget _build(BuildContext context, int x, int y) {
+  Widget? _build(BuildContext context, int x, int y) {
     final layoutController = _itemController!._layoutController!;
     final i = layoutController._indexesTree[layoutController.getIndex([x, y])];
 
@@ -24,8 +24,7 @@ abstract class SlotBackgroundBuilder<T extends DashboardItem> {
       item = layoutController.itemController._items[i] as T;
     }
 
-    return buildBackground(context, item, x, y, layoutController._isEditing) ??
-        Container();
+    return buildBackground(context, item, x, y, layoutController._isEditing);
   }
 
   /// Build background widget.

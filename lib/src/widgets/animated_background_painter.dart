@@ -106,17 +106,19 @@ class _AnimatedBackgroundPainterState extends State<_AnimatedBackgroundPainter>
           animation: _animation!,
           builder: (context, child) {
             _last = _animation!.value;
-            return CustomPaint(
-              painter: _EditModeBackgroundPainter(
-                  verticalSlotEdge: widget.layoutController.verticalSlotEdge,
-                  fillPosition: _animation!.value,
-                  slotCount: widget.layoutController.slotCount,
-                  style: widget.editModeSettings.backgroundStyle,
-                  slotEdge: widget.layoutController.slotEdge,
-                  lines: widget.editModeSettings.paintBackgroundLines,
-                  offset: widget.offset.pixels,
-                  viewportDelegate: widget.layoutController._viewportDelegate),
-              isComplex: true,
+            return RepaintBoundary(
+              child: CustomPaint(
+                painter: _EditModeBackgroundPainter(
+                    verticalSlotEdge: widget.layoutController.verticalSlotEdge,
+                    fillPosition: _animation!.value,
+                    slotCount: widget.layoutController.slotCount,
+                    style: widget.editModeSettings.backgroundStyle,
+                    slotEdge: widget.layoutController.slotEdge,
+                    lines: widget.editModeSettings.paintBackgroundLines,
+                    offset: widget.offset.pixels,
+                    viewportDelegate: widget.layoutController._viewportDelegate),
+                isComplex: true,
+              ),
             );
           });
     } else {
@@ -125,17 +127,19 @@ class _AnimatedBackgroundPainterState extends State<_AnimatedBackgroundPainter>
       _start = null;
       _animationController.duration = widget.editModeSettings.duration;
       offset = widget.offset.pixels;
-      return CustomPaint(
-        painter: _EditModeBackgroundPainter(
-            fillPosition: fillRect,
-            lines: widget.editModeSettings.paintBackgroundLines,
-            verticalSlotEdge: widget.layoutController.verticalSlotEdge,
-            slotCount: widget.layoutController.slotCount,
-            style: widget.editModeSettings.backgroundStyle,
-            slotEdge: widget.layoutController.slotEdge,
-            offset: widget.offset.pixels,
-            viewportDelegate: widget.layoutController._viewportDelegate),
-        isComplex: false,
+      return RepaintBoundary(
+        child: CustomPaint(
+          painter: _EditModeBackgroundPainter(
+              fillPosition: fillRect,
+              lines: widget.editModeSettings.paintBackgroundLines,
+              verticalSlotEdge: widget.layoutController.verticalSlotEdge,
+              slotCount: widget.layoutController.slotCount,
+              style: widget.editModeSettings.backgroundStyle,
+              slotEdge: widget.layoutController.slotEdge,
+              offset: widget.offset.pixels,
+              viewportDelegate: widget.layoutController._viewportDelegate),
+          isComplex: false,
+        ),
       );
     }
   }

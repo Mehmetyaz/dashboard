@@ -285,7 +285,7 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
   final SplayTreeMap<int, String> _startsTree = SplayTreeMap<int, String>();
   final SplayTreeMap<int, String> _endsTree = SplayTreeMap<int, String>();
 
-  final SplayTreeMap<int, String> _indexesTree = SplayTreeMap<int, String>();
+  final FastIndexMap _indexesTree = FastIndexMap();
 
   _EditSession? editSession;
 
@@ -599,11 +599,9 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
 
     var r = getIndexCoordinate(value);
     var n = itemLayout.copyWithStarts(startX: r[0], startY: r[1]);
+    var maxShrinkAttempts = slotCount + 1;
     var i = 0;
-    while (true) {
-      if (i > 1000000) {
-        throw Exception("loop");
-      }
+    while (i < maxShrinkAttempts) {
       i++;
 
       var exOut = n.startX + n.width > slotCount;
@@ -645,6 +643,7 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
         }
       }
     }
+    return null;
   }
 
   ///
@@ -655,18 +654,17 @@ class _DashboardLayoutController<T extends DashboardItem> with ChangeNotifier {
       _removeFromIndexes(itemCurrent, id);
 
       var i = start;
-      while (true) {
+      final maxBottom = _endsTree.isEmpty ? 0 : _endsTree.lastKey()!;
+      final maxSearchLimit = maxBottom + (slotCount * 10) + 100;
+      while (i <= maxSearchLimit) {
         var nLayout = tryMount(i, itemCurrent.origin);
         if (nLayout != null) {
           _indexItem(nLayout, id);
           return true;
         }
-
-        if (i > 1000000) {
-          throw Exception("Stack overflow");
-        }
         i++;
       }
+      return false;
     } on Exception {
       rethrow;
     }
@@ -985,4 +983,37 @@ class _EditSession {
 
   ///
   final _ItemCurrentLayout editingOrigin;
+}
+
+class FastIndexMap {
+  final Map<int, String> _map = <int, String>{};
+
+  String? operator [](int index) => _map[index];
+
+  void operator []=(int index, String value) {
+    _map[index] = value;
+  }
+
+  bool containsKey(int index) => _map.containsKey(index);
+
+  String? remove(int index) => _map.remove(index);
+
+  void clear() => _map.clear();
+
+  bool get isEmpty => _map.isEmpty;
+  bool get isNotEmpty => _map.isNotEmpty;
+
+  Iterable<String> get values => _map.values;
+
+  Set<String> itemsInRange(int startIndex, int endIndex) {
+    final result = <String>{};
+    final start = startIndex < 0 ? 0 : startIndex;
+    for (var i = start; i <= endIndex; i++) {
+      final id = _map[i];
+      if (id != null) {
+        result.add(id);
+      }
+    }
+    return result;
+  }
 }

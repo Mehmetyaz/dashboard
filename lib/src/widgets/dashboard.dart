@@ -493,9 +493,6 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
       viewportBuilder: (c, o) {
         _layoutController._viewportOffset = o;
         if (!_reloading) _setNewOffset(o, constrains);
-        WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-          _stateKey.currentState?._listenOffset(o);
-        });
         _building = false;
         return _DashboardStack<T>(
           itemStyle: widget.itemStyle,
